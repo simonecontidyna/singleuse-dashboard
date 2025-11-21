@@ -1,6 +1,6 @@
 # 📊 Dynatrace Dashboard
 
-Dashboard con layout rigido (6 tiles a esagoni + 1 tabella) per visualizzare dati Dynatrace da query personalizzabili.
+Dashboard con layout rigido (6 tiles a esagoni + 1 tabella) per visualizzare dati Dynatrace da query DQL personalizzabili.
 Può essere eseguita localmente o su webserver pubblico usando un proxy python o php, le impostazioni vengono salvate nel localstorage del browser
 e sono esportabili e reimportabili.
 ---
