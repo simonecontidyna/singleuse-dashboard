@@ -1,0 +1,2111 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Overview</title>
+    <link rel="icon" type="image/x-icon" href="https://dt-cdn.net/favicon.ico">
+    <link rel="shortcut icon" type="image/x-icon" href="https://dt-cdn.net/favicon.ico">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .header {
+            background: white;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 18px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .refresh-control {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 6px 12px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+        }
+
+        .refresh-control label {
+            font-size: 13px;
+            margin: 0;
+        }
+
+        .header-controls select {
+            padding: 6px 12px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .header-controls button {
+            padding: 6px 12px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .header-controls button:hover {
+            background: #f5f5f5;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-left: 8px;
+        }
+
+        .status-indicator.online {
+            background: #52c41a;
+        }
+
+        .status-indicator.offline {
+            background: #ff4d4f;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .region-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .region-card h2 {
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+            margin: 0;
+        }
+
+        .config-tile-btn {
+            padding: 4px;
+            background: transparent;
+            color: #666;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .config-tile-btn:hover {
+            color: #1496ff;
+            background: rgba(20, 150, 255, 0.1);
+        }
+
+        .hexagons {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            min-height: 120px;
+        }
+
+        .hexagon-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            flex: 0 1 auto;
+        }
+
+        .hexagon {
+            position: relative;
+            transition: transform 0.2s;
+        }
+
+        /* Dimensioni dinamiche basate sul numero di esagoni */
+        .hexagons[data-count="1"] .hexagon {
+            width: 140px;
+            height: 161px;
+        }
+
+        .hexagons[data-count="1"] .hexagon-label {
+            font-size: 14px;
+        }
+
+        .hexagons[data-count="1"] .hexagon-status {
+            font-size: 16px;
+        }
+
+        .hexagons[data-count="2"] .hexagon,
+        .hexagons[data-count="3"] .hexagon {
+            width: 110px;
+            height: 126px;
+        }
+
+        .hexagons[data-count="2"] .hexagon-label,
+        .hexagons[data-count="3"] .hexagon-label {
+            font-size: 12px;
+        }
+
+        .hexagons[data-count="2"] .hexagon-status,
+        .hexagons[data-count="3"] .hexagon-status {
+            font-size: 14px;
+        }
+
+        .hexagons[data-count="4"] .hexagon,
+        .hexagons[data-count="5"] .hexagon {
+            width: 90px;
+            height: 103px;
+        }
+
+        .hexagons[data-count="4"] .hexagon-label,
+        .hexagons[data-count="5"] .hexagon-label {
+            font-size: 10px;
+        }
+
+        .hexagons[data-count="4"] .hexagon-status,
+        .hexagons[data-count="5"] .hexagon-status {
+            font-size: 12px;
+        }
+
+        .hexagons:not([data-count]) .hexagon {
+            width: 80px;
+            height: 92px;
+        }
+
+        .hexagons:not([data-count]) .hexagon-label {
+            font-size: 9px;
+        }
+
+        .hexagons:not([data-count]) .hexagon-status {
+            font-size: 11px;
+        }
+
+        .hexagon.clickable {
+            cursor: pointer;
+        }
+
+        .hexagon.clickable:hover {
+            transform: scale(1.05);
+        }
+
+        .hexagon svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .hexagon-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            width: 80%;
+            pointer-events: none;
+        }
+
+        .hexagon-label {
+            font-size: 11px;
+            color: #000;
+            margin-bottom: 4px;
+            font-weight: 500;
+            word-wrap: break-word;
+        }
+
+        .hexagon-status {
+            font-size: 13px;
+            font-weight: 600;
+            color: #000;
+        }
+
+        .status-ok, .status-OK {
+            fill: #6b9a5b;
+        }
+
+        .status-warning, .status-WARN {
+            fill: #f5a623;
+        }
+
+        .status-error, .status-ALERT {
+            fill: #d0021b;
+        }
+
+        .status-unknown {
+            fill: #999;
+        }
+
+        .events-table {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            max-height: 600px;
+            position: relative;
+        }
+
+        .table-loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            backdrop-filter: blur(2px);
+        }
+
+        .table-loading-overlay.active {
+            display: flex;
+        }
+
+        .table-loading-content {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .table-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #1496ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .table-loading-text {
+            color: #666;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            border-bottom: 1px solid #ddd;
+            background: #fafafa;
+            flex-shrink: 0;
+            position: relative;
+        }
+
+        .table-header h2 {
+            font-size: 16px;
+            font-weight: 500;
+            margin: 0;
+        }
+
+        .table-loading-indicator {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            color: #1496ff;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .table-loading-indicator.active {
+            display: flex;
+        }
+
+        .table-loading-spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid #e0e0e0;
+            border-top-color: #1496ff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .table-header button {
+            padding: 6px;
+            background: transparent;
+            color: #666;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s;
+        }
+
+        .table-header button:hover {
+            color: #1496ff;
+            background: rgba(20, 150, 255, 0.1);
+        }
+
+        .table-loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .table-loading-overlay.active {
+            display: flex;
+        }
+
+        .table-loading-spinner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #1496ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .table-loading-text {
+            color: #666;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .table-wrapper {
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .events-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .events-table thead {
+            position: sticky;
+            top: 0;
+            background: #f5f5f5;
+            z-index: 10;
+        }
+
+        .events-table th {
+            background: #f5f5f5;
+            padding: 12px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            color: #333;
+            border-bottom: 1px solid #ddd;
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+        }
+
+        .events-table th:hover {
+            background: #e8e8e8;
+        }
+
+        .events-table th.sortable::after {
+            content: ' ⇅';
+            color: #999;
+            font-size: 10px;
+        }
+
+        .events-table th.sort-asc::after {
+            content: ' ▲';
+            color: #1496ff;
+        }
+
+        .events-table th.sort-desc::after {
+            content: ' ▼';
+            color: #1496ff;
+        }
+
+        .events-table td {
+            padding: 12px;
+            font-size: 12px;
+            color: #333;
+            border-bottom: 1px solid #f0f0f0;
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Supporto Markdown nelle celle */
+        .events-table td strong,
+        .events-table td b {
+            font-weight: 700;
+        }
+
+        .events-table td em,
+        .events-table td i {
+            font-style: italic;
+        }
+
+        .events-table td code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+        }
+
+        .events-table td a {
+            color: #1496ff;
+            text-decoration: none;
+        }
+
+        .events-table td a:hover {
+            text-decoration: underline;
+        }
+
+        .events-table td ul,
+        .events-table td ol {
+            margin: 5px 0;
+            padding-left: 20px;
+        }
+
+        .events-table tr:hover {
+            background: #fafafa;
+        }
+
+        .event-link {
+            color: #1496ff;
+            text-decoration: none;
+        }
+
+        .event-link:hover {
+            text-decoration: underline;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            max-width: 800px;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+
+        .modal-content h2 {
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+
+        .modal-content label {
+            display: block;
+            margin-bottom: 8px;
+            margin-top: 15px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .modal-content input,
+        .modal-content textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        .modal-content textarea {
+            min-height: 150px;
+            font-family: 'Courier New', monospace;
+            resize: vertical;
+        }
+
+        .info-box {
+            background: #e6f7ff;
+            border: 1px solid #91d5ff;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 13px;
+        }
+
+        .info-box code {
+            background: #fff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .modal-content button {
+            padding: 10px 20px;
+            background: #1496ff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .modal-content button:hover {
+            background: #0d7de0;
+        }
+
+        .modal-content button.secondary {
+            background: #6c757d;
+        }
+
+        .modal-content button.secondary:hover {
+            background: #5a6268;
+        }
+
+        .modal-content button.danger {
+            background: #dc3545;
+        }
+
+        .modal-content button.danger:hover {
+            background: #c82333;
+        }
+
+        /* Variables modal specific */
+        .variable-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+
+        .variable-row input {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        .variable-row button {
+            padding: 8px 12px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .add-variable-btn {
+            padding: 8px 16px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            margin-bottom: 15px;
+        }
+
+        .add-variable-btn:hover {
+            background: #218838;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>
+            <img src="https://companieslogo.com/img/orig/DT-89e31c0c.png?t=1720244491" 
+                 alt="Dynatrace" style="width: 32px; height: 32px; vertical-align: middle; margin-right: 10px;">
+            Gemini/Benstore - Overview
+            <span class="status-indicator" id="proxyStatus"></span>
+        </h1>
+        <div class="header-controls">
+            <select id="timeframeSelector" onchange="onTimeframeChange()">
+                <option value="10m">Last 10 minutes</option>
+                <option value="30m">Last 30 minutes</option>
+                <option value="1h">Last 1 hour</option>
+                <option value="2h" selected>Last 2 hours</option>
+                <option value="6h">Last 6 hours</option>
+                <option value="12h">Last 12 hours</option>
+                <option value="24h">Last 24 hours</option>
+                <option value="today">Today</option>
+                <option value="yesterday">Yesterday</option>
+                <option value="3d">Last 3 days</option>
+                <option value="7d">Last 7 days</option>
+                <option value="14d">Last 14 days</option>
+                <option value="30d">Last 30 days</option>
+            </select>
+            <div class="refresh-control">
+                <label for="refreshInterval">Auto-refresh:</label>
+                <select id="refreshInterval" onchange="onRefreshIntervalChange()">
+                    <option value="0">Off</option>
+                    <option value="30">30s</option>
+                    <option value="60">1m</option>
+                    <option value="120" selected>2m</option>
+                    <option value="300">5m</option>
+                    <option value="600">10m</option>
+                    <option value="1800">30m</option>
+                    <option value="3600">60m</option>
+                </select>
+            </div>
+            <button onclick="showVariablesConfig()">📋 Variabili</button>
+            <button onclick="showConfig()">⚙️ Config</button>
+            <button onclick="refreshData()">🔄 Aggiorna</button>
+        </div>
+    </div>
+
+    <div class="dashboard-grid" id="tilesContainer">
+        <!-- Tiles generati dinamicamente -->
+    </div>
+
+    <div class="events-table">
+        <div class="table-loading-overlay" id="tableLoadingOverlay">
+            <div class="table-loading-content">
+                <div class="table-spinner"></div>
+                <div class="table-loading-text">Aggiornamento dati...</div>
+            </div>
+        </div>
+        <div class="table-header">
+            <h2 id="tableTitle">Events</h2>
+            <button onclick="showQueryConfig()" title="Configura query e titolo">⚙️</button>
+        </div>
+        <div class="table-wrapper">
+            <table>
+                <thead id="tableHeader">
+                    <tr><th>Caricamento...</th></tr>
+                </thead>
+                <tbody id="eventsTableBody">
+                    <tr><td class="loading">Caricamento eventi...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal Configurazione Dynatrace -->
+    <div class="modal" id="configModal">
+        <div class="modal-content">
+            <h2>Configurazione Dashboard</h2>
+            
+            <!-- SEZIONE 1: Impostazioni Generali -->
+            <div style="border-bottom: 1px solid #ddd; padding-bottom: 15px; margin-bottom: 15px;">
+                <h3 style="margin: 0 0 15px 0; font-size: 14px; color: #666; text-transform: uppercase;">📊 Impostazioni Generali</h3>
+                
+                <label>Titolo Dashboard:</label>
+                <input type="text" id="dashboardTitle" placeholder="Dashboard Overview">
+                
+                <label>Intervallo Refresh Automatico:</label>
+                <select id="configRefreshInterval" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                    <option value="0">Disabilitato</option>
+                    <option value="30">30 secondi</option>
+                    <option value="60">1 minuto</option>
+                    <option value="120" selected>2 minuti</option>
+                    <option value="300">5 minuti</option>
+                    <option value="600">10 minuti</option>
+                    <option value="1800">30 minuti</option>
+                    <option value="3600">60 minuti</option>
+                </select>
+            </div>
+            
+            <!-- SEZIONE 2: Connessione Dynatrace -->
+            <div style="border-bottom: 1px solid #ddd; padding-bottom: 15px; margin-bottom: 15px;">
+                <h3 style="margin: 0 0 15px 0; font-size: 14px; color: #666; text-transform: uppercase;">🔗 Connessione Dynatrace</h3>
+                
+                <label>URL Tenant Dynatrace:</label>
+                <input type="text" id="tenantUrl" placeholder="https://xxx.live.dynatrace.com">
+                
+                <label>API Token:</label>
+                <input type="password" id="apiToken" placeholder="dt0c01.XXX...">
+            </div>
+            
+            <!-- SEZIONE 3: Configurazione Proxy -->
+            <div style="border-bottom: 1px solid #ddd; padding-bottom: 15px; margin-bottom: 15px;">
+                <h3 style="margin: 0 0 15px 0; font-size: 14px; color: #666; text-transform: uppercase;">🔄 Configurazione Proxy</h3>
+                
+                <label>Modalità Proxy:</label>
+                <select id="deployMode" onchange="onDeployModeChange()" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; margin-bottom: 15px;">
+                    <option value="proxy">Python Proxy (localhost)</option>
+                    <option value="php-proxy">PHP Proxy (webserver)</option>
+                </select>
+                
+                <!-- Configurazione Python Proxy -->
+                <div id="pythonProxyConfig">
+                    <div class="info-box">
+                        <strong>ℹ️ Python Proxy:</strong> Richiede <code>proxy_server.py</code> in esecuzione sul tuo computer.
+                        <br>Avvia con: <code>python3 proxy_server.py</code>
+                    </div>
+                    
+                    <label>URL Proxy Python:</label>
+                    <input type="text" id="proxyUrlPython" value="http://localhost:8081" placeholder="http://localhost:8081">
+                    
+                    <label style="display: flex; align-items: center; gap: 8px; margin-top: 15px;">
+                        <input type="checkbox" id="enableProxyLogging" style="width: auto; margin: 0;">
+                        Abilita logging dettagliato (stampa request/response nella console Python)
+                    </label>
+                </div>
+                
+                <!-- Configurazione PHP Proxy -->
+                <div id="phpProxyConfig" style="display: none;">
+                    <div class="info-box">
+                        <strong>ℹ️ PHP Proxy:</strong> Richiede <code>proxy.php</code> caricato sul tuo webserver.
+                    </div>
+                    
+                    <label>URL Proxy PHP:</label>
+                    <input type="text" id="proxyUrlPHP" placeholder="https://tuo-dominio.com/proxy.php">
+                    
+                    <label>Proxy API Key:</label>
+                    <input type="password" id="proxyApiKey" placeholder="Chiave configurata in proxy.php">
+                    <div style="font-size: 12px; color: #666; margin-top: 5px;">
+                        Deve corrispondere alla chiave <code>PROXY_API_KEY</code> configurata in proxy.php
+                    </div>
+                </div>
+            </div>
+            
+            <!-- SEZIONE 4: Gestione Configurazione -->
+            <div>
+                <h3 style="margin: 0 0 15px 0; font-size: 14px; color: #666; text-transform: uppercase;">💾 Gestione Configurazione</h3>
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="exportSettings()" style="flex: 1; background: #28a745;">📥 Esporta</button>
+                    <button onclick="importSettings()" style="flex: 1; background: #17a2b8;">📤 Importa</button>
+                </div>
+                <input type="file" id="importFileInput" accept=".json" style="display: none;" onchange="handleImportFile(event)">
+            </div>
+            
+            <div class="button-group">
+                <button onclick="saveConfig()">Salva</button>
+                <button class="secondary" onclick="closeModal('configModal')">Annulla</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Configurazione Query Tabella -->
+    <div class="modal" id="queryModal">
+        <div class="modal-content">
+            <h2>Configura Tabella</h2>
+            
+            <div class="info-box">
+                <strong>💡 Suggerimento:</strong> La query deve restituire i campi da visualizzare.
+                <br>Usa <code>${{VARIABILE}}</code> per le variabili globali.
+            </div>
+            
+            <label>Titolo Tabella:</label>
+            <input type="text" id="tableCustomTitle" placeholder="Events">
+            
+            <label>Query DQL:</label>
+            <textarea id="customQuery" placeholder="fetch events | filter ... | fields ..."></textarea>
+            
+            <div class="button-group">
+                <button onclick="saveCustomQuery()">Salva e Applica</button>
+                <button class="danger" onclick="resetToDefaultQuery()">Ripristina Default</button>
+                <button class="secondary" onclick="closeModal('queryModal')">Annulla</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Configurazione Tile -->
+    <div class="modal" id="tileModal">
+        <div class="modal-content">
+            <h2>Configura Tile</h2>
+            
+            <div class="info-box">
+                <strong>💡 Info:</strong> La query deve restituire i seguenti campi:
+                <br>• Nome (da mostrare nell'esagono)
+                <br>• Status/Level (OK, WARN, ALERT)
+                <br>• Link (opzionale, per rendere l'esagono cliccabile)
+                <br>Usa <code>${{VARIABILE}}</code> per le variabili globali.
+            </div>
+            
+            <label>Titolo Tile:</label>
+            <input type="text" id="tileTitle" placeholder="Overview Region">
+            
+            <label>Query DQL:</label>
+            <textarea id="tileQuery" placeholder="fetch ... | fields name, status, link"></textarea>
+            
+            <label>Nome Campo "Nome":</label>
+            <input type="text" id="tileNameField" placeholder="name" value="name">
+            
+            <label>Nome Campo "Status":</label>
+            <input type="text" id="tileStatusField" placeholder="status" value="status">
+            
+            <label>Nome Campo "Link" (opzionale):</label>
+            <input type="text" id="tileLinkField" placeholder="link" value="link">
+            
+            <div class="button-group">
+                <button onclick="saveTileConfig()">Salva e Applica</button>
+                <button class="secondary" onclick="closeModal('tileModal')">Annulla</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Variabili Globali -->
+    <div class="modal" id="variablesModal">
+        <div class="modal-content">
+            <h2>Variabili Globali</h2>
+            
+            <div class="info-box">
+                <strong>💡 Info:</strong> Le variabili possono essere usate nelle query con <code>${{NOME}}</code>
+                <br>Esempio: <code>filter region == "${{REGION}}"</code>
+                <br><br>
+                <strong>Variabili automatiche disponibili:</strong>
+                <br>• <code>${{TIMEFRAME_START}}</code> - Timestamp inizio timeframe (ISO 8601: 2025-11-20T14:36:00.000Z)
+                <br>• <code>${{TIMEFRAME_END}}</code> - Timestamp fine timeframe (ISO 8601: 2025-11-20T14:36:00.000Z)
+                <br>Esempio: <code>filter timestamp >= toTimestamp("${{TIMEFRAME_START}}") and timestamp <= toTimestamp("${{TIMEFRAME_END}}")</code>
+            </div>
+            
+            <button class="add-variable-btn" onclick="addVariableRow()">+ Aggiungi Variabile</button>
+            
+            <div id="variablesContainer"></div>
+            
+            <div class="button-group">
+                <button onclick="saveVariables()">Salva</button>
+                <button class="secondary" onclick="closeModal('variablesModal')">Annulla</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configurazione e stato globale
+        const CONFIG_KEY = 'dynatrace_config';
+        const PREFERENCES_KEY = 'dashboard_preferences';
+        const TILES_CONFIG_KEY = 'tiles_config';
+        const VARIABLES_KEY = 'global_variables';
+        const TABLE_QUERY_KEY = 'custom_table_query';
+        const TABLE_TITLE_KEY = 'custom_table_title';
+
+        let config = loadConfig();
+        let preferences = loadPreferences();
+        let currentTimeframe = preferences.timeframe || '2h';
+        let refreshInterval = preferences.refreshInterval || 120;
+        let refreshTimer = null;
+        let currentEditingTileId = null;
+
+        // Query default per la tabella
+        const DEFAULT_TABLE_QUERY = `fetch events
+| filter event.kind == "DAVIS_PROBLEM"
+| sort timestamp desc
+| limit 50
+| fields timestamp, display_id, event.status, event.name, event.start, event.end`;
+
+        // Configurazione default dei tile
+        const DEFAULT_TILES_CONFIG = [
+            {
+                id: 'tile1',
+                title: 'Region 1',
+                query: 'fetch dt.entity.process_group_instance | limit 3 | fields entity.name | fieldsAdd status = "OK", link = ""',
+                nameField: 'entity.name',
+                statusField: 'status',
+                linkField: 'link'
+            },
+            {
+                id: 'tile2',
+                title: 'Region 2',
+                query: 'fetch dt.entity.process_group_instance | limit 3 | fields entity.name | fieldsAdd status = "OK", link = ""',
+                nameField: 'entity.name',
+                statusField: 'status',
+                linkField: 'link'
+            },
+            {
+                id: 'tile3',
+                title: 'Region 3',
+                query: 'fetch dt.entity.process_group_instance | limit 3 | fields entity.name | fieldsAdd status = "OK", link = ""',
+                nameField: 'entity.name',
+                statusField: 'status',
+                linkField: 'link'
+            },
+            {
+                id: 'tile4',
+                title: 'Region 4',
+                query: 'fetch dt.entity.process_group_instance | limit 3 | fields entity.name | fieldsAdd status = "OK", link = ""',
+                nameField: 'entity.name',
+                statusField: 'status',
+                linkField: 'link'
+            },
+            {
+                id: 'tile5',
+                title: 'Region 5',
+                query: 'fetch dt.entity.process_group_instance | limit 3 | fields entity.name | fieldsAdd status = "OK", link = ""',
+                nameField: 'entity.name',
+                statusField: 'status',
+                linkField: 'link'
+            },
+            {
+                id: 'tile6',
+                title: 'Region 6',
+                query: 'fetch dt.entity.process_group_instance | limit 1 | fields entity.name | fieldsAdd status = "OK", link = ""',
+                nameField: 'entity.name',
+                statusField: 'status',
+                linkField: 'link'
+            }
+        ];
+
+        let tilesConfig = JSON.parse(localStorage.getItem(TILES_CONFIG_KEY) || JSON.stringify(DEFAULT_TILES_CONFIG));
+        let globalVariables = JSON.parse(localStorage.getItem(VARIABLES_KEY) || '{}');
+        let customTableQuery = localStorage.getItem(TABLE_QUERY_KEY) || DEFAULT_TABLE_QUERY;
+        let customTableTitle = localStorage.getItem(TABLE_TITLE_KEY) || 'Events';
+        let dashboardTitle = localStorage.getItem('dashboard_title') || 'Dashboard Overview';
+        
+        // Variabili per ordinamento tabella
+        let currentTableData = [];
+        let currentSortColumn = null;
+        let currentSortDirection = 'asc';
+
+        // ==================== FUNZIONI DI CONFIGURAZIONE ====================
+
+        function loadConfig() {
+            const stored = localStorage.getItem(CONFIG_KEY);
+            if (stored) {
+                const cfg = JSON.parse(stored);
+                if (!cfg.proxyUrl) cfg.proxyUrl = 'http://localhost:8081';
+                if (!cfg.deployMode) cfg.deployMode = 'proxy';
+                if (!cfg.proxyApiKey) cfg.proxyApiKey = '';
+                return cfg;
+            }
+            return null;
+        }
+
+        function loadPreferences() {
+            const stored = localStorage.getItem(PREFERENCES_KEY);
+            return stored ? JSON.parse(stored) : { timeframe: '2h', refreshInterval: 120 };
+        }
+
+        function savePreferences() {
+            localStorage.setItem(PREFERENCES_KEY, JSON.stringify({
+                timeframe: currentTimeframe,
+                refreshInterval: refreshInterval
+            }));
+        }
+
+        function exportSettings() {
+            const settings = {
+                version: '1.0',
+                exportDate: new Date().toISOString(),
+                config: config,
+                preferences: {
+                    timeframe: currentTimeframe,
+                    refreshInterval: refreshInterval
+                },
+                tilesConfig: tilesConfig,
+                globalVariables: globalVariables,
+                customTableQuery: customTableQuery,
+                customTableTitle: customTableTitle,
+                dashboardTitle: dashboardTitle
+            };
+
+            const blob = new Blob([JSON.stringify(settings, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `dashboard-settings-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            alert('Impostazioni esportate con successo!');
+        }
+
+        function importSettings() {
+            document.getElementById('importFileInput').click();
+        }
+
+        function handleImportFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const settings = JSON.parse(e.target.result);
+                    
+                    // Valida il formato
+                    if (!settings.version || !settings.config) {
+                        throw new Error('File non valido');
+                    }
+
+                    // Conferma importazione
+                    if (!confirm('Importare le impostazioni? Questo sovrascriverà la configurazione attuale.')) {
+                        return;
+                    }
+
+                    // Importa tutte le impostazioni
+                    if (settings.config) {
+                        localStorage.setItem(CONFIG_KEY, JSON.stringify(settings.config));
+                        config = settings.config;
+                    }
+                    if (settings.preferences) {
+                        localStorage.setItem(PREFERENCES_KEY, JSON.stringify(settings.preferences));
+                        preferences = settings.preferences;
+                        currentTimeframe = preferences.timeframe || '2h';
+                        refreshInterval = preferences.refreshInterval || 120;
+                    }
+                    if (settings.tilesConfig) {
+                        localStorage.setItem(TILES_CONFIG_KEY, JSON.stringify(settings.tilesConfig));
+                        tilesConfig = settings.tilesConfig;
+                    }
+                    if (settings.globalVariables) {
+                        localStorage.setItem(VARIABLES_KEY, JSON.stringify(settings.globalVariables));
+                        globalVariables = settings.globalVariables;
+                    }
+                    if (settings.customTableQuery) {
+                        localStorage.setItem(TABLE_QUERY_KEY, settings.customTableQuery);
+                        customTableQuery = settings.customTableQuery;
+                    }
+                    if (settings.customTableTitle) {
+                        localStorage.setItem(TABLE_TITLE_KEY, settings.customTableTitle);
+                        customTableTitle = settings.customTableTitle;
+                    }
+                    if (settings.dashboardTitle) {
+                        localStorage.setItem('dashboard_title', settings.dashboardTitle);
+                        dashboardTitle = settings.dashboardTitle;
+                    }
+
+                    alert('Impostazioni importate con successo! La pagina verrà ricaricata.');
+                    location.reload();
+                } catch (error) {
+                    alert('Errore nell\'importazione: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+            
+            // Reset input per permettere re-import dello stesso file
+            event.target.value = '';
+        }
+
+        function showConfig() {
+            document.getElementById('configModal').classList.add('active');
+            if (config) {
+                document.getElementById('tenantUrl').value = config.tenantUrl || '';
+                document.getElementById('apiToken').value = config.apiToken || '';
+                document.getElementById('deployMode').value = config.deployMode || 'proxy';
+                document.getElementById('enableProxyLogging').checked = config.enableLogging || false;
+                
+                // Popola i campi proxy in base alla modalità salvata
+                if (config.deployMode === 'php-proxy') {
+                    document.getElementById('proxyUrlPHP').value = config.proxyUrl || '';
+                    document.getElementById('proxyApiKey').value = config.proxyApiKey || '';
+                    document.getElementById('proxyUrlPython').value = 'http://localhost:8081';
+                } else {
+                    document.getElementById('proxyUrlPython').value = config.proxyUrl || 'http://localhost:8081';
+                    document.getElementById('proxyUrlPHP').value = '';
+                    document.getElementById('proxyApiKey').value = config.proxyApiKey || '';
+                }
+            }
+            document.getElementById('dashboardTitle').value = dashboardTitle;
+            document.getElementById('configRefreshInterval').value = refreshInterval.toString();
+            
+            // Mostra/nascondi configurazione proxy
+            onDeployModeChange();
+        }
+
+        function onDeployModeChange() {
+            const deployMode = document.getElementById('deployMode').value;
+            const pythonProxyConfig = document.getElementById('pythonProxyConfig');
+            const phpProxyConfig = document.getElementById('phpProxyConfig');
+            
+            if (deployMode === 'php-proxy') {
+                pythonProxyConfig.style.display = 'none';
+                phpProxyConfig.style.display = 'block';
+            } else {
+                pythonProxyConfig.style.display = 'block';
+                phpProxyConfig.style.display = 'none';
+            }
+        }
+
+        function saveConfig() {
+            let tenantUrl = document.getElementById('tenantUrl').value.trim();
+            const apiToken = document.getElementById('apiToken').value.trim();
+            const deployMode = document.getElementById('deployMode').value;
+            const enableLogging = document.getElementById('enableProxyLogging').checked;
+            const newDashboardTitle = document.getElementById('dashboardTitle').value.trim() || 'Dashboard Overview';
+            const newRefreshInterval = parseInt(document.getElementById('configRefreshInterval').value);
+            
+            // Leggi proxy URL e API key dal campo corretto in base alla modalità
+            let proxyUrl, proxyApiKey;
+            if (deployMode === 'php-proxy') {
+                proxyUrl = document.getElementById('proxyUrlPHP').value.trim();
+                const proxyApiKeyRaw = document.getElementById('proxyApiKey').value;
+                proxyApiKey = proxyApiKeyRaw ? proxyApiKeyRaw.trim() : '';
+            } else {
+                proxyUrl = document.getElementById('proxyUrlPython').value.trim() || 'http://localhost:8081';
+                proxyApiKey = '';
+            }
+            
+            if (!tenantUrl || !apiToken) {
+                alert('Inserisci URL del tenant e API token');
+                return;
+            }
+            
+            if (deployMode === 'php-proxy' && !proxyUrl) {
+                alert('Inserisci URL del proxy PHP');
+                return;
+            }
+
+            tenantUrl = tenantUrl.replace(/\/+$/, '');
+            
+            try {
+                new URL(tenantUrl);
+            } catch (e) {
+                alert('URL del tenant non valido');
+                return;
+            }
+
+            // Salva configurazione
+            config = { tenantUrl, apiToken, proxyUrl, proxyApiKey, deployMode, enableLogging };
+            localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+            
+            // Salva titolo dashboard
+            dashboardTitle = newDashboardTitle;
+            localStorage.setItem('dashboard_title', dashboardTitle);
+            document.querySelector('.header h1').innerHTML = `
+                <img src="https://companieslogo.com/img/orig/DT-89e31c0c.png?t=1720244491" 
+                     alt="Dynatrace" style="width: 32px; height: 32px; vertical-align: middle; margin-right: 10px;">
+                ${dashboardTitle}
+                <span class="status-indicator" id="proxyStatus"></span>
+            `;
+            
+            // Salva refresh interval
+            refreshInterval = newRefreshInterval;
+            savePreferences();
+            document.getElementById('refreshInterval').value = refreshInterval.toString();
+            setupAutoRefresh();
+            
+            closeModal('configModal');
+            refreshData();
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        function updateProxyStatus(isOnline) {
+            const indicator = document.getElementById('proxyStatus');
+            indicator.className = 'status-indicator ' + (isOnline ? 'online' : 'offline');
+            indicator.title = isOnline ? 'Proxy connesso' : 'Proxy non raggiungibile';
+        }
+
+        // ==================== GESTIONE TIMEFRAME ====================
+
+        function onTimeframeChange() {
+            currentTimeframe = document.getElementById('timeframeSelector').value;
+            savePreferences();
+            refreshData();
+        }
+
+        function onRefreshIntervalChange() {
+            refreshInterval = parseInt(document.getElementById('refreshInterval').value);
+            savePreferences();
+            setupAutoRefresh();
+        }
+
+        function setupAutoRefresh() {
+            if (refreshTimer) {
+                clearInterval(refreshTimer);
+                refreshTimer = null;
+            }
+
+            if (refreshInterval > 0) {
+                refreshTimer = setInterval(refreshData, refreshInterval * 1000);
+            }
+        }
+
+        function getTimeframeForAPI() {
+            const now = new Date();
+            let startTime, endTime = now;
+            
+            switch(currentTimeframe) {
+                case '10m': startTime = new Date(now - 10 * 60 * 1000); break;
+                case '30m': startTime = new Date(now - 30 * 60 * 1000); break;
+                case '1h': startTime = new Date(now - 60 * 60 * 1000); break;
+                case '2h': startTime = new Date(now - 2 * 60 * 60 * 1000); break;
+                case '6h': startTime = new Date(now - 6 * 60 * 60 * 1000); break;
+                case '12h': startTime = new Date(now - 12 * 60 * 60 * 1000); break;
+                case '24h': startTime = new Date(now - 24 * 60 * 60 * 1000); break;
+                case 'today':
+                    startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+                    break;
+                case 'yesterday':
+                    const yesterday = new Date(now);
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    startTime = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 0, 0, 0);
+                    endTime = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 23, 59, 59);
+                    break;
+                case '3d': startTime = new Date(now - 3 * 24 * 60 * 60 * 1000); break;
+                case '7d': startTime = new Date(now - 7 * 24 * 60 * 60 * 1000); break;
+                case '14d': startTime = new Date(now - 14 * 24 * 60 * 60 * 1000); break;
+                case '30d': startTime = new Date(now - 30 * 24 * 60 * 60 * 1000); break;
+                default: startTime = new Date(now - 2 * 60 * 60 * 1000);
+            }
+            
+            return {
+                start: startTime.toISOString(),
+                end: endTime.toISOString()
+            };
+        }
+
+        function getTimeframeVariables() {
+            const timeframe = getTimeframeForAPI();
+            return {
+                TIMEFRAME_START: timeframe.start,  // Formato ISO: 2025-11-20T14:36:00.000Z
+                TIMEFRAME_END: timeframe.end        // Formato ISO: 2025-11-20T14:36:00.000Z
+            };
+        }
+
+        // ==================== GESTIONE VARIABILI GLOBALI ====================
+
+        function replaceVariables(query) {
+            let result = query;
+            
+            // Aggiungi le variabili di timeframe
+            const timeframeVars = getTimeframeVariables();
+            const allVariables = { ...globalVariables, ...timeframeVars };
+            
+            // Sostituisci tutte le variabili
+            for (const [key, value] of Object.entries(allVariables)) {
+                const regex = new RegExp(`\\$\\{\\{${key}\\}\\}`, 'g');
+                result = result.replace(regex, value);
+            }
+            
+            return result;
+        }
+
+        function renderMarkdown(text) {
+            if (!text || typeof text !== 'string') return text;
+            
+            let html = text;
+            
+            // Ordine importante: processare prima gli elementi più specifici
+            
+            // Code: `code` (prima di tutto per evitare che venga processato)
+            html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+            
+            // Bold: **text** o __text__
+            html = html.replace(/\*\*([^\*]+)\*\*/g, '<strong>$1</strong>');
+            html = html.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+            
+            // Strikethrough: ~~text~~
+            html = html.replace(/~~([^~]+)~~/g, '<del>$1</del>');
+            
+            // Italic: *text* o _text_ (dopo bold per evitare conflitti)
+            html = html.replace(/\*([^\*\n]+)\*/g, '<em>$1</em>');
+            html = html.replace(/_([^_\n]+)_/g, '<em>$1</em>');
+            
+            // Link: [text](url)
+            html = html.replace(/\[([^\]]+)\]\(([^\)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+            
+            return html;
+        }
+
+        function formatDuration(rawValue) {
+            if (rawValue === null || rawValue === undefined || rawValue === '') return '-';
+            
+            // Converti stringa in numero
+            let value;
+            if (typeof rawValue === 'string') {
+                const cleaned = rawValue.trim().replace(/,/g, '.');
+                value = parseFloat(cleaned);
+            } else {
+                value = Number(rawValue);
+            }
+            
+            if (isNaN(value) || value === 0) return '0ms';
+            
+            value = Math.abs(value);
+            
+            // Dynatrace restituisce tipicamente durate in nanosecondi
+            // Valori tipici per eventi:
+            // - 1 secondo = 1,000,000,000 ns (1e9)
+            // - 1 minuto = 60,000,000,000 ns (6e10)
+            // - 1 ora = 3,600,000,000,000 ns (3.6e12)
+            // - 1 giorno = 86,400,000,000,000 ns (8.64e13)
+            //
+            // Strategia basata sull'ordine di grandezza:
+            // - >= 1e9 (miliardi): quasi certamente nanosecondi
+            // - >= 1e6 (milioni): probabilmente microsecondi
+            // - >= 1e3 (migliaia): probabilmente millisecondi
+            // - < 1e3: probabilmente secondi
+            
+            let ms;
+            
+            if (value >= 1e9) {
+                // Nanosecondi (valore in miliardi)
+                // 1e9 ns = 1 secondo, 1e12 ns = 16 minuti, 1e13 ns = 2.7 ore
+                ms = value / 1e6;
+            } else if (value >= 1e6) {
+                // Microsecondi (valore in milioni)
+                // 1e6 μs = 1 secondo, 1e9 μs = 16 minuti
+                ms = value / 1e3;
+            } else if (value >= 1e3) {
+                // Millisecondi (valore in migliaia)
+                // 1e3 ms = 1 secondo, 1e6 ms = 16 minuti
+                ms = value;
+            } else {
+                // Secondi (valori piccoli < 1000)
+                ms = value * 1000;
+            }
+            
+            return formatMilliseconds(ms);
+        }
+        
+        function formatMilliseconds(ms) {
+            if (ms < 1) {
+                // Sub-millisecondo
+                const us = ms * 1000;
+                if (us < 1) {
+                    return `${Math.round(us * 1000)}ns`;
+                }
+                return `${Math.round(us)}μs`;
+            }
+            
+            if (ms < 1000) {
+                return `${Math.round(ms)}ms`;
+            }
+            
+            const seconds = Math.floor(ms / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+            
+            if (days > 0) {
+                const remainingHours = hours % 24;
+                return remainingHours > 0 ? `${days}d ${remainingHours}h` : `${days}d`;
+            }
+            
+            if (hours > 0) {
+                const remainingMinutes = minutes % 60;
+                return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+            }
+            
+            if (minutes > 0) {
+                const remainingSeconds = seconds % 60;
+                return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
+            }
+            
+            const remainingMs = Math.round(ms % 1000);
+            return remainingMs > 0 ? `${seconds}s ${remainingMs}ms` : `${seconds}s`;
+        }
+
+        function showVariablesConfig() {
+            document.getElementById('variablesModal').classList.add('active');
+            renderVariables();
+        }
+
+        function renderVariables() {
+            const container = document.getElementById('variablesContainer');
+            container.innerHTML = '';
+            
+            for (const [key, value] of Object.entries(globalVariables)) {
+                addVariableRow(key, value);
+            }
+        }
+
+        function addVariableRow(key = '', value = '') {
+            const container = document.getElementById('variablesContainer');
+            const row = document.createElement('div');
+            row.className = 'variable-row';
+            
+            const inputKey = document.createElement('input');
+            inputKey.type = 'text';
+            inputKey.placeholder = 'Nome variabile (es. REGION)';
+            inputKey.value = key;
+            
+            const inputValue = document.createElement('input');
+            inputValue.type = 'text';
+            inputValue.placeholder = 'Valore';
+            inputValue.value = value;
+            
+            const btnDelete = document.createElement('button');
+            btnDelete.textContent = '✕';
+            btnDelete.onclick = () => row.remove();
+            
+            row.appendChild(inputKey);
+            row.appendChild(inputValue);
+            row.appendChild(btnDelete);
+            container.appendChild(row);
+        }
+
+        function saveVariables() {
+            const container = document.getElementById('variablesContainer');
+            const rows = container.querySelectorAll('.variable-row');
+            const newVars = {};
+            
+            rows.forEach(row => {
+                const inputs = row.querySelectorAll('input');
+                const key = inputs[0].value.trim();
+                const value = inputs[1].value.trim();
+                if (key) newVars[key] = value;
+            });
+            
+            globalVariables = newVars;
+            localStorage.setItem(VARIABLES_KEY, JSON.stringify(globalVariables));
+            closeModal('variablesModal');
+            
+            // Ricarica tutti i dati con le nuove variabili
+            refreshData();
+        }
+
+        // ==================== GESTIONE QUERY TABELLA ====================
+
+        function showQueryConfig() {
+            document.getElementById('queryModal').classList.add('active');
+            document.getElementById('customQuery').value = customTableQuery;
+            document.getElementById('tableCustomTitle').value = customTableTitle;
+        }
+
+        function saveCustomQuery() {
+            const query = document.getElementById('customQuery').value.trim();
+            const title = document.getElementById('tableCustomTitle').value.trim() || 'Events';
+            
+            if (!query) {
+                alert('Inserisci una query DQL valida');
+                return;
+            }
+
+            customTableQuery = query;
+            customTableTitle = title;
+            localStorage.setItem(TABLE_QUERY_KEY, query);
+            localStorage.setItem(TABLE_TITLE_KEY, title);
+            
+            document.getElementById('tableTitle').textContent = title;
+            closeModal('queryModal');
+            loadEvents();
+        }
+
+        function resetToDefaultQuery() {
+            if (confirm('Ripristinare la query e il titolo di default?')) {
+                customTableQuery = DEFAULT_TABLE_QUERY;
+                customTableTitle = 'Events';
+                localStorage.setItem(TABLE_QUERY_KEY, DEFAULT_TABLE_QUERY);
+                localStorage.setItem(TABLE_TITLE_KEY, 'Events');
+                
+                document.getElementById('customQuery').value = DEFAULT_TABLE_QUERY;
+                document.getElementById('tableCustomTitle').value = 'Events';
+                document.getElementById('tableTitle').textContent = 'Events';
+                
+                loadEvents();
+            }
+        }
+
+        // ==================== GESTIONE TILE ====================
+
+        function renderTiles() {
+            const container = document.getElementById('tilesContainer');
+            container.innerHTML = '';
+            
+            tilesConfig.forEach(tile => {
+                const card = document.createElement('div');
+                card.className = 'region-card';
+                card.innerHTML = `
+                    <div class="card-header">
+                        <h2>${tile.title}</h2>
+                        <button class="config-tile-btn" onclick="showTileConfig('${tile.id}')" title="Configura tile">⚙️</button>
+                    </div>
+                    <div class="hexagons" id="hexagons-${tile.id}">
+                        <div class="loading">Caricamento...</div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function showTileConfig(tileId) {
+            currentEditingTileId = tileId;
+            const tile = tilesConfig.find(t => t.id === tileId);
+            
+            if (!tile) return;
+            
+            document.getElementById('tileTitle').value = tile.title;
+            document.getElementById('tileQuery').value = tile.query;
+            document.getElementById('tileNameField').value = tile.nameField;
+            document.getElementById('tileStatusField').value = tile.statusField;
+            document.getElementById('tileLinkField').value = tile.linkField || '';
+            
+            document.getElementById('tileModal').classList.add('active');
+        }
+
+        function saveTileConfig() {
+            if (!currentEditingTileId) return;
+            
+            const title = document.getElementById('tileTitle').value.trim();
+            const query = document.getElementById('tileQuery').value.trim();
+            const nameField = document.getElementById('tileNameField').value.trim();
+            const statusField = document.getElementById('tileStatusField').value.trim();
+            const linkField = document.getElementById('tileLinkField').value.trim();
+            
+            if (!title || !query || !nameField || !statusField) {
+                alert('Compila tutti i campi obbligatori');
+                return;
+            }
+            
+            const tileIndex = tilesConfig.findIndex(t => t.id === currentEditingTileId);
+            if (tileIndex !== -1) {
+                tilesConfig[tileIndex] = {
+                    ...tilesConfig[tileIndex],
+                    title,
+                    query,
+                    nameField,
+                    statusField,
+                    linkField
+                };
+                
+                localStorage.setItem(TILES_CONFIG_KEY, JSON.stringify(tilesConfig));
+                closeModal('tileModal');
+                
+                // Ricarica solo questo tile
+                loadTileData(tilesConfig[tileIndex]);
+                
+                // Aggiorna anche il titolo nella UI
+                const card = document.querySelector(`#hexagons-${currentEditingTileId}`).parentElement;
+                card.querySelector('h2').textContent = title;
+            }
+        }
+
+        function createHexagon(name, status, link) {
+            const container = document.createElement('div');
+            container.className = 'hexagon-container';
+            
+            const statusClass = `status-${status}`;
+            const hasLink = link && link.trim() !== '';
+            
+            container.innerHTML = `
+                <div class="hexagon ${hasLink ? 'clickable' : ''}" ${hasLink ? `onclick="window.open('${link}', '_blank')"` : ''}>
+                    <svg viewBox="0 0 100 115">
+                        <defs>
+                            <clipPath id="hexClip">
+                                <path d="M 50 8 L 92 31 L 92 77 L 50 100 L 8 77 L 8 31 Z" />
+                            </clipPath>
+                        </defs>
+                        <path class="${statusClass}" 
+                              d="M 50 3 
+                                 C 48 3, 46 4, 45 5.5
+                                 L 8 28.5
+                                 C 6 29.5, 5 31.5, 5 33.5
+                                 L 5 74.5
+                                 C 5 76.5, 6 78.5, 8 79.5
+                                 L 45 102.5
+                                 C 46 104, 48 105, 50 105
+                                 C 52 105, 54 104, 55 102.5
+                                 L 92 79.5
+                                 C 94 78.5, 95 76.5, 95 74.5
+                                 L 95 33.5
+                                 C 95 31.5, 94 29.5, 92 28.5
+                                 L 55 5.5
+                                 C 54 4, 52 3, 50 3 Z"
+                              stroke="none"/>
+                    </svg>
+                    <div class="hexagon-content">
+                        <div class="hexagon-label">${name}</div>
+                        <div class="hexagon-status">${status}</div>
+                    </div>
+                </div>
+            `;
+            
+            return container;
+        }
+
+        async function loadTileData(tile) {
+            const container = document.getElementById(`hexagons-${tile.id}`);
+            if (!container) return;
+            
+            try {
+                container.innerHTML = '<div class="loading">Caricamento...</div>';
+                
+                const queryWithVars = replaceVariables(tile.query);
+                const result = await executeDQL(queryWithVars, tile.title);
+                
+                container.innerHTML = '';
+                
+                if (result.records && result.records.length > 0) {
+                    // Imposta l'attributo data-count per dimensionamento dinamico
+                    const count = Math.min(result.records.length, 6);
+                    container.setAttribute('data-count', count);
+                    
+                    result.records.forEach(record => {
+                        const name = record[tile.nameField] || 'N/A';
+                        const status = record[tile.statusField] || 'unknown';
+                        const link = record[tile.linkField] || '';
+                        
+                        const hexagon = createHexagon(name, status, link);
+                        container.appendChild(hexagon);
+                    });
+                } else {
+                    container.removeAttribute('data-count');
+                    container.innerHTML = '<div style="text-align:center;color:#666;">Nessun dato</div>';
+                }
+            } catch (error) {
+                console.error(`Errore caricamento tile ${tile.id}:`, error);
+                container.removeAttribute('data-count');
+                container.innerHTML = '<div style="text-align:center;color:red;">Errore</div>';
+            }
+        }
+
+        // ==================== GESTIONE TABELLA ====================
+
+        function sortTable(column) {
+            if (currentSortColumn === column) {
+                // Cambia direzione se clicco sulla stessa colonna
+                currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                // Nuova colonna, ordina ascending
+                currentSortColumn = column;
+                currentSortDirection = 'asc';
+            }
+            
+            renderTableData(currentTableData);
+        }
+
+        function renderTableData(data) {
+            const tableHeader = document.getElementById('tableHeader');
+            const tbody = document.getElementById('eventsTableBody');
+            
+            if (!data || data.length === 0) {
+                tableHeader.innerHTML = '<tr><th>Risultati</th></tr>';
+                tbody.innerHTML = '<tr><td style="text-align:center;">Nessun risultato</td></tr>';
+                return;
+            }
+            
+            const firstRecord = data[0];
+            const columns = Object.keys(firstRecord);
+            
+            // Crea header con indicatori di ordinamento
+            tableHeader.innerHTML = '';
+            const headerRow = document.createElement('tr');
+            columns.forEach(column => {
+                const th = document.createElement('th');
+                th.textContent = column;
+                th.className = 'sortable';
+                
+                if (column === currentSortColumn) {
+                    th.classList.add(currentSortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+                }
+                
+                th.onclick = () => sortTable(column);
+                headerRow.appendChild(th);
+            });
+            tableHeader.appendChild(headerRow);
+            
+            // Ordina i dati
+            const sortedData = [...data].sort((a, b) => {
+                if (!currentSortColumn) return 0;
+                
+                let aVal = a[currentSortColumn];
+                let bVal = b[currentSortColumn];
+                
+                // Gestione null/undefined
+                if (aVal === null || aVal === undefined) aVal = '';
+                if (bVal === null || bVal === undefined) bVal = '';
+                
+                // Confronto numerico
+                if (typeof aVal === 'number' && typeof bVal === 'number') {
+                    return currentSortDirection === 'asc' ? aVal - bVal : bVal - aVal;
+                }
+                
+                // Confronto stringhe (case insensitive)
+                const aStr = String(aVal).toLowerCase();
+                const bStr = String(bVal).toLowerCase();
+                
+                if (aStr < bStr) return currentSortDirection === 'asc' ? -1 : 1;
+                if (aStr > bStr) return currentSortDirection === 'asc' ? 1 : -1;
+                return 0;
+            });
+            
+            // Renderizza righe
+            tbody.innerHTML = '';
+            sortedData.forEach(record => {
+                const row = document.createElement('tr');
+                
+                columns.forEach(column => {
+                    const td = document.createElement('td');
+                    let value = record[column];
+                    let rawValue = value; // Mantieni valore originale per sorting
+                    
+                    if (value === null || value === undefined) {
+                        value = '';
+                    } else if (column.includes('timestamp')) {
+                        // Formatta timestamp
+                        const numVal = typeof value === 'string' ? parseFloat(value) : value;
+                        if (!isNaN(numVal)) {
+                            value = new Date(numVal).toLocaleString('it-IT');
+                        }
+                    } else if (column.toLowerCase() === 'duration' || column.toLowerCase() === 'durata') {
+                        // Formatta duration in formato leggibile (gestisce sia numeri che stringhe)
+                        value = formatDuration(value);
+                    } else if (Array.isArray(value)) {
+                        value = value.join(', ');
+                    } else if (typeof value === 'object') {
+                        value = JSON.stringify(value);
+                    }
+                    
+                    // Renderizza markdown se il valore è una stringa
+                    if (typeof value === 'string') {
+                        const markdownRendered = renderMarkdown(value);
+                        td.innerHTML = markdownRendered;
+                    } else {
+                        td.textContent = value;
+                    }
+                    
+                    td.title = typeof rawValue === 'string' ? rawValue : String(rawValue);
+                    td.setAttribute('data-value', rawValue); // Per sorting corretto
+                    
+                    row.appendChild(td);
+                });
+                
+                tbody.appendChild(row);
+            });
+        }
+
+        async function loadEvents() {
+            const loadingOverlay = document.getElementById('tableLoadingOverlay');
+            
+            try {
+                // Mostra indicatore di caricamento
+                if (loadingOverlay) {
+                    loadingOverlay.classList.add('active');
+                }
+                
+                const queryWithVars = replaceVariables(customTableQuery);
+                const result = await executeDQL(queryWithVars, customTableTitle);
+                
+                if (result.records && result.records.length > 0) {
+                    currentTableData = result.records;
+                    renderTableData(currentTableData);
+                } else {
+                    currentTableData = [];
+                    const tableHeader = document.getElementById('tableHeader');
+                    const tbody = document.getElementById('eventsTableBody');
+                    
+                    const headerRow = document.createElement('tr');
+                    const th = document.createElement('th');
+                    th.textContent = 'Risultati';
+                    headerRow.appendChild(th);
+                    tableHeader.innerHTML = '';
+                    tableHeader.appendChild(headerRow);
+                    
+                    tbody.innerHTML = '<tr><td style="text-align:center;">Nessun risultato</td></tr>';
+                }
+            } catch (error) {
+                console.error('Errore caricamento eventi:', error);
+                const errorMsg = error.message.includes('Failed to fetch') 
+                    ? 'Proxy non raggiungibile' 
+                    : error.message;
+                
+                currentTableData = [];
+                const tableHeader = document.getElementById('tableHeader');
+                const tbody = document.getElementById('eventsTableBody');
+                
+                if (!tableHeader.children.length) {
+                    const headerRow = document.createElement('tr');
+                    const th = document.createElement('th');
+                    th.textContent = 'Errore';
+                    headerRow.appendChild(th);
+                    tableHeader.appendChild(headerRow);
+                }
+                    
+                tbody.innerHTML = `<tr><td style="text-align:center;color:red;">⚠️ ${errorMsg}</td></tr>`;
+            } finally {
+                // Nascondi indicatore di caricamento
+                if (loadingOverlay) {
+                    loadingOverlay.classList.remove('active');
+                }
+            }
+        }
+
+        // ==================== API DQL ====================
+
+        async function executeDQL(query, tileTitle = 'Unknown') {
+            if (!config) {
+                throw new Error('Configurazione mancante');
+            }
+
+            const timeframe = getTimeframeForAPI();
+            
+            if (config.deployMode === 'php-proxy') {
+                // PHP Proxy mode: chiamata tramite proxy PHP
+                return await executeDQLPHPProxy(query, timeframe, tileTitle);
+            } else {
+                // Proxy mode: chiamata tramite proxy Python
+                return await executeDQLProxy(query, timeframe, tileTitle);
+            }
+        }
+
+        async function executeDQLPHPProxy(query, timeframe, tileTitle) {
+            const proxyUrl = config.proxyUrl;
+            
+            if (!proxyUrl) {
+                throw new Error('URL del proxy PHP non configurato');
+            }
+            
+            try {
+                const headers = { 
+                    'Content-Type': 'application/json'
+                };
+                
+                // Aggiungi API key se configurata
+                if (config.proxyApiKey && typeof config.proxyApiKey === 'string' && config.proxyApiKey.trim() !== '') {
+                    headers['X-Proxy-API-Key'] = config.proxyApiKey.trim();
+                }
+                
+                const response = await fetch(proxyUrl, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({
+                        url: config.tenantUrl,
+                        token: config.apiToken,
+                        query: query,
+                        timeframe: timeframe
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.message || `Errore API: ${response.status}`);
+                }
+
+                const result = await response.json();
+                updateProxyStatus(true);
+                
+                if (result.result && result.result.records) {
+                    return { records: result.result.records, state: result.state };
+                } else if (result.records) {
+                    return result;
+                }
+                
+                return { records: [], state: result.state };
+            } catch (error) {
+                updateProxyStatus(false);
+                throw error;
+            }
+        }
+
+        async function executeDQLProxy(query, timeframe, tileTitle) {
+            const proxyUrl = config.proxyUrl || 'http://localhost:8081';
+            const apiEndpoint = `${proxyUrl}/api`;
+            
+            try {
+                const headers = { 
+                    'Content-Type': 'application/json'
+                };
+                
+                // Aggiungi API key se configurata
+                if (config.proxyApiKey && typeof config.proxyApiKey === 'string' && config.proxyApiKey.trim() !== '') {
+                    headers['X-Proxy-API-Key'] = config.proxyApiKey.trim();
+                }
+                
+                const response = await fetch(apiEndpoint, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({
+                        url: config.tenantUrl,
+                        token: config.apiToken,
+                        query: query,
+                        timeframe: timeframe,
+                        enableLogging: config.enableLogging || false,
+                        tileTitle: tileTitle
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.message || `Errore API: ${response.status}`);
+                }
+
+                const result = await response.json();
+                updateProxyStatus(true);
+                
+                if (result.result && result.result.records) {
+                    return { records: result.result.records, state: result.state };
+                } else if (result.records) {
+                    return result;
+                }
+                
+                return { records: [], state: result.state };
+            } catch (error) {
+                updateProxyStatus(false);
+                throw error;
+            }
+        }
+
+        function updateProxyStatus(isOnline) {
+            const indicator = document.getElementById('proxyStatus');
+            if (!indicator) return;
+            
+            indicator.className = 'status-indicator ' + (isOnline ? 'online' : 'offline');
+            
+            if (config) {
+                if (config.deployMode === 'php-proxy') {
+                    indicator.title = isOnline ? 'PHP Proxy connesso' : 'PHP Proxy non raggiungibile';
+                } else {
+                    indicator.title = isOnline ? 'Python Proxy connesso' : 'Python Proxy non raggiungibile';
+                }
+            }
+        }
+
+        // ==================== REFRESH ====================
+
+        async function checkConnection() {
+            if (!config) {
+                updateProxyStatus(false);
+                return;
+            }
+            
+            if (config.deployMode === 'php-proxy') {
+                // In PHP proxy mode, verifichiamo che il proxy PHP sia raggiungibile
+                try {
+                    const healthUrl = config.proxyUrl.replace(/\/proxy\.php$/, '') + '/proxy.php/health';
+                    const response = await fetch(healthUrl, {
+                        method: 'GET'
+                    });
+                    updateProxyStatus(response.ok);
+                } catch (error) {
+                    updateProxyStatus(false);
+                }
+            } else {
+                // In proxy mode, verifichiamo che il proxy Python sia raggiungibile
+                try {
+                    const response = await fetch(`${config.proxyUrl}/health`, {
+                        method: 'GET'
+                    });
+                    updateProxyStatus(response.ok);
+                } catch (error) {
+                    updateProxyStatus(false);
+                }
+            }
+        }
+
+        async function refreshData() {
+            if (!config) {
+                showConfig();
+                return;
+            }
+
+            // Mostra subito l'indicatore di caricamento della tabella
+            const loadingOverlay = document.getElementById('tableLoadingOverlay');
+            if (loadingOverlay) {
+                loadingOverlay.classList.add('active');
+            }
+
+            // Carica tutti i tile e la tabella in parallelo
+            const tilePromises = tilesConfig.map(tile => loadTileData(tile));
+            const tablePromise = loadEvents();
+            
+            await Promise.all([...tilePromises, tablePromise]);
+        }
+
+        // ==================== INIZIALIZZAZIONE ====================
+
+        window.addEventListener('DOMContentLoaded', () => {
+            updateProxyStatus(false);
+            
+            // Ripristina preferenze
+            document.getElementById('timeframeSelector').value = currentTimeframe;
+            document.getElementById('refreshInterval').value = refreshInterval;
+            document.getElementById('tableTitle').textContent = customTableTitle;
+            
+            // Imposta il titolo dashboard
+            const h1Element = document.querySelector('.header h1');
+            const statusIndicator = h1Element.querySelector('.status-indicator');
+            h1Element.innerHTML = `
+                <img src="https://companieslogo.com/img/orig/DT-89e31c0c.png?t=1720244491" 
+                     alt="Dynatrace" style="width: 32px; height: 32px; vertical-align: middle; margin-right: 10px;">
+                ${dashboardTitle}
+            `;
+            h1Element.appendChild(statusIndicator);
+            
+            // Renderizza i tile
+            renderTiles();
+            
+            if (!config) {
+                showConfig();
+            } else {
+                refreshData();
+                checkConnection();
+            }
+
+            setupAutoRefresh();
+            
+            // Verifica connessione periodicamente
+            setInterval(checkConnection, 10000); // Ogni 10 secondi
+        });
+    </script>
+</body>
+</html>
