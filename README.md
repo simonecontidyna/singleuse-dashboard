@@ -1,110 +1,108 @@
-# 📊 Dynatrace Simple External Dashboard
+# Dynatrace Simple External Dashboard
 
-Dashboard con layout rigido (6 tiles a esagoni + 1 tabella) per visualizzare dati Dynatrace da query DQL personalizzabili.
-Può essere eseguita localmente o su webserver pubblico usando un proxy python o php, le impostazioni vengono salvate nel localstorage del browser
-e sono esportabili e reimportabili.
----
+A lightweight, customizable dashboard for visualizing Dynatrace data through DQL queries. Features a fixed layout with 6 hexagonal tiles and 1 data table.
 
-## 📦 File Inclusi
+The dashboard can run locally or on a public webserver using either a Python or PHP proxy. All settings are stored in the browser's localStorage and can be exported/imported.
 
-| File | Descrizione |
+## Files
+
+| File | Description |
 |------|-------------|
-| `dashboard.html` | Dashboard principale |
-| `proxy_server.py` | Proxy Python per uso locale |
-| `proxy.php` | Proxy PHP per webserver |
+| `dashboard.html` | Main dashboard application |
+| `proxy_server.py` | Python proxy for local use |
+| `proxy.php` | PHP proxy for webserver deployment |
 
----
+## Quick Start
 
-##  Guida Rapida
+### Option A: Local Setup (Python Proxy)
 
-### Opzione A: Uso Locale (Python Proxy)
+**Requirements:** Python 3
 
-**Requisiti:** Python 3 installato
-
-1. Metti `dashboard.html` e `proxy_server.py` nella stessa cartella
-2. Apri terminale e avvia il proxy:
+1. Place `dashboard.html` and `proxy_server.py` in the same folder
+2. Start the proxy server:
    ```bash
    python3 proxy_server.py
    ```
-3. Apri nel browser: `http://localhost:8081`
-4. Clicca ⚙️ **Config** e compila:
-   - **Modalità Proxy:** Python Proxy
-   - **URL Tenant:** `https://xxx.apps.dynatrace.com`
-   - **API Token:** Il tuo token Dynatrace
-5. Clicca **Salva**
+3. Open `http://localhost:8081` in your browser
+4. Click **Config** and enter:
+   - **Proxy Mode:** Python Proxy
+   - **Tenant URL:** `https://xxx.apps.dynatrace.com`
+   - **API Token:** Your Dynatrace token
+5. Click **Save**
 
----
+### Option B: Webserver Setup (PHP Proxy)
 
-### Opzione B: Webserver (PHP Proxy)
+**Requirements:** PHP-enabled webserver
 
-**Requisiti:** Webserver in hosting che supporti PHP
+1. Configure `proxy.php` by editing the API key:
+   ```php
+   define('PROXY_API_KEY', 'YOUR_SECRET_KEY');
+   ```
 
-1. **Configura proxy.php:**
-   - Apri `proxy.php` e modifica la riga:
-     ```php
-     define('PROXY_API_KEY', 'LA_TUA_CHIAVE_SEGRETA');
-     ```
-
-2. **Carica i file** sul webserver:
+2. Upload files to your webserver:
    ```
    /public_html/
      ├── dashboard.html
      └── proxy.php
    ```
 
-3. **Apri la dashboard** nel browser: `https://tuo-dominio.com/dashboard.html`
+3. Open `https://your-domain.com/dashboard.html` in your browser
 
-4. Clicca ⚙️ **Config** e compila:
-   - **Modalità Proxy:** PHP Proxy
-   - **URL Proxy PHP:** `https://tuo-dominio.com/proxy.php`
-   - **Proxy API Key:** La stessa chiave configurata in proxy.php
-   - **URL Tenant:** `https://xxx.live.dynatrace.com`
-   - **API Token:** Il tuo token Dynatrace
+4. Click **Config** and enter:
+   - **Proxy Mode:** PHP Proxy
+   - **PHP Proxy URL:** `https://your-domain.com/proxy.php`
+   - **Proxy API Key:** Same key configured in proxy.php
+   - **Tenant URL:** `https://xxx.apps.dynatrace.com`
+   - **API Token:** Your Dynatrace token
 
-5. Clicca **Salva**
+5. Click **Save**
 
----
+## Dashboard Configuration
 
-## ⚙️ Configurazione Dashboard
+### Hexagonal Tiles
 
-### Tile Esagonali
-- Clicca ⚙️ su un tile per configurare query e campi
-- La query deve restituire: nome, stato (OK/WARN/ALERT), link (opzionale)
+Click the settings icon on any tile to configure its query and field mappings. Queries must return: name, status (OK/WARN/ALERT), and optionally a link.
 
-### Tabella Eventi
-- Clicca ⚙️ sulla tabella per personalizzare la query
+### Events Table
 
-### Variabili Globali
-- Clicca 🔧 **Variabili** per definire variabili riutilizzabili
-- Usa `${{NOME_VARIABILE}}` nelle query
+Click the settings icon on the table to customize its DQL query.
 
-### Esporta/Importa
-- ⚙️ Config → **Esporta** per salvare tutte le impostazioni
-- ⚙️ Config → **Importa** per ripristinarle
+### Global Variables
 
----
+Define reusable variables via the **Variables** button. Reference them in queries using the `${{VARIABLE_NAME}}` syntax.
 
-## 🔑 Token Dynatrace
+### Export/Import
 
-Necessita di un Platform Token token: https://docs.dynatrace.com/docs/shortlink/platform-tokens
-Assegnare gli Scope necessari in base alle query che verranno usate nella dashboard, ad esempio:
-storage:buckets:read, storage:events:read, storage:metrics:read, storage:logs:read, storage:entities:read
----
+Use **Config > Export** to save all settings as JSON, and **Config > Import** to restore them.
 
-## ❓ Risoluzione Problemi
+## Dynatrace Token
 
-| Problema | Soluzione |
-|----------|-----------|
-| Indicatore rosso | Verifica che il proxy sia avviato |
-| Errore 401 | Controlla API Token o Proxy API Key |
-| Errore 403 | Verifica permessi token Dynatrace |
-| Errore CORS | Usa il proxy, non la connessione diretta |
-| Dati vuoti | Controlla la query DQL nella console Dynatrace |
+This dashboard requires a Platform Token. See the [Dynatrace documentation](https://docs.dynatrace.com/docs/shortlink/platform-tokens) for details.
 
----
+Assign scopes based on your query requirements:
 
-## 📝 Note
+- `storage:buckets:read`
+- `storage:events:read`
+- `storage:metrics:read`
+- `storage:logs:read`
+- `storage:entities:read`
 
-- Il **refresh automatico** è configurabile da 30 secondi a 60 minuti
-- Il **PHP Proxy** ha rate limiting di 30 richieste/minuto per IP
-- Le impostazioni sono salvate nel browser (localStorage)
+## Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| Red status indicator | Verify the proxy is running |
+| 401 Error | Check API Token or Proxy API Key |
+| 403 Error | Verify Dynatrace token permissions |
+| CORS Error | Ensure you're using a proxy, not direct connection |
+| Empty data | Validate your DQL query in the Dynatrace console |
+
+## Notes
+
+- Auto-refresh interval is configurable from 30 seconds to 60 minutes
+- PHP proxy includes rate limiting (30 requests/minute per IP)
+- All settings persist in browser localStorage
+
+## License
+
+MIT License - See [LICENSE](LICENSE) for details.
