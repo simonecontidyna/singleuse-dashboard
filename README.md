@@ -2,6 +2,8 @@
 
 A lightweight, customizable dashboard for visualizing Dynatrace data through DQL queries. Features a fixed layout with 6 hexagonal tiles and 1 data table.
 
+![](dashboard-sshot01.png)
+
 The dashboard can run locally or on a public webserver using either a Python or PHP proxy. All settings are stored in the browser's localStorage and can be exported/imported.
 
 ## Files
