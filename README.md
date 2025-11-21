@@ -1,4 +1,4 @@
-# Dynatrace Simple External Dashboard
+# Simple External Dashboard
 
 A lightweight, customizable dashboard for visualizing Dynatrace data through DQL queries. Features a fixed layout with 6 hexagonal tiles and 1 data table.
 
