@@ -793,10 +793,10 @@
                 <h3 style="margin: 0 0 15px 0; font-size: 14px; color: #666; text-transform: uppercase;">🔗 Dynatrace Connection</h3>
                 
                 <label>Dynatrace Tenant URL:</label>
-                <input type="text" id="tenantUrl" placeholder="https://xxx.live.dynatrace.com">
+                <input type="text" id="tenantUrl" placeholder="https://xxx.apps.dynatrace.com">
                 
                 <label>API Token:</label>
-                <input type="password" id="apiToken" placeholder="dt0c01.XXX...">
+                <input type="password" id="apiToken" placeholder="dt0s16.XXX...">
             </div>
             
             <!-- SECTION 3: Proxy Configuration -->
@@ -961,18 +961,25 @@
         let currentEditingTileId = null;
 
         // Query default per la tabella
-        const DEFAULT_TABLE_QUERY = `fetch events
-| filter event.kind == "DAVIS_PROBLEM"
-| sort timestamp desc
-| limit 50
-| fields timestamp, display_id, event.status, event.name, event.start, event.end`;
+        const DEFAULT_TABLE_QUERY = `fetch dt.davis.problems
+| fields timestampOrg=timestamp,
+ timestamp=formatTimestamp(timestamp, format: "dd/MM/yyyy HH:mm:ss.SSS"),
+ display_id,
+ host.name,
+ event.status,
+ event.description,
+ duration=toDuration(event.end-event.start),
+ event.start=formatTimestamp(event.start, format: "dd/MM/yyyy HH:mm:ss.SSS"), 
+ event.end=formatTimestamp(event.end, format: "dd/MM/yyyy HH:mm:ss.SSS")
+| fieldsAdd day = formatTimestamp(timestampOrg, format: "dd/MM/yyyy")
+| fieldsRemove timestampOrg`;
 
         // Configurazione default dei tile
         const DEFAULT_TILES_CONFIG = [
             {
                 id: 'tile1',
                 title: 'Region 1',
-                query: 'fetch dt.entity.process_group_instance | limit 3 | fields entity.name | fieldsAdd status = "OK", link = ""',
+                query: 'fetch dt.entity.host | limit 3 | fields entity.name | fieldsAdd status = "OK", link = ""',
                 nameField: 'entity.name',
                 statusField: 'status',
                 linkField: 'link'
@@ -980,7 +987,7 @@
             {
                 id: 'tile2',
                 title: 'Region 2',
-                query: 'fetch dt.entity.process_group_instance | limit 3 | fields entity.name | fieldsAdd status = "OK", link = ""',
+                query: 'fetch dt.entity.process_group_instance | limit 3 | fields entity.name=substring(entity.name,to:10) | fieldsAdd status = "OK", link = ""',
                 nameField: 'entity.name',
                 statusField: 'status',
                 linkField: 'link'
@@ -988,7 +995,7 @@
             {
                 id: 'tile3',
                 title: 'Region 3',
-                query: 'fetch dt.entity.process_group_instance | limit 3 | fields entity.name | fieldsAdd status = "OK", link = ""',
+                query: 'fetch dt.entity.service | limit 3 | fields entity.name=substring(entity.name,to:10) | fieldsAdd status = "OK", link = ""',
                 nameField: 'entity.name',
                 statusField: 'status',
                 linkField: 'link'
@@ -996,7 +1003,7 @@
             {
                 id: 'tile4',
                 title: 'Region 4',
-                query: 'fetch dt.entity.process_group_instance | limit 3 | fields entity.name | fieldsAdd status = "OK", link = ""',
+                query: 'fetch dt.entity.application | limit 3 | fields entity.name=substring(entity.name,to:10) | fieldsAdd status = "OK", link = ""',
                 nameField: 'entity.name',
                 statusField: 'status',
                 linkField: 'link'
@@ -1004,7 +1011,7 @@
             {
                 id: 'tile5',
                 title: 'Region 5',
-                query: 'fetch dt.entity.process_group_instance | limit 3 | fields entity.name | fieldsAdd status = "OK", link = ""',
+                query: 'fetch dt.entity.kubernetes_cluster | limit 3 | fields entity.name=substring(entity.name,to:10) | fieldsAdd status = "OK", link = ""',
                 nameField: 'entity.name',
                 statusField: 'status',
                 linkField: 'link'
@@ -1012,7 +1019,7 @@
             {
                 id: 'tile6',
                 title: 'Region 6',
-                query: 'fetch dt.entity.process_group_instance | limit 1 | fields entity.name | fieldsAdd status = "OK", link = ""',
+                query: 'fetch dt.entity.apm_security_gateway | limit 1 | fields entity.name=substring(entity.name,to:10) | fieldsAdd status = "OK", link = ""',
                 nameField: 'entity.name',
                 statusField: 'status',
                 linkField: 'link'
