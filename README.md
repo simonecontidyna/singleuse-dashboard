@@ -105,6 +105,12 @@ Assign scopes based on your query requirements:
 - PHP proxy includes rate limiting (30 requests/minute per IP)
 - All settings persist in browser localStorage
 
+## Requirements
+
+- Python 3.6+ (for local proxy)
+- PHP 7.0+ with cURL extension (for PHP proxy)
+
+
 ## License
 
 MIT License - See [LICENSE](LICENSE) for details.
