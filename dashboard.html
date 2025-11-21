@@ -730,7 +730,7 @@
                     <option value="3600">60m</option>
                 </select>
             </div>
-            <button onclick="showVariablesConfig()">📋 Variabili</button>
+            <button onclick="showVariablesConfig()">📋 Variables</button>
             <button onclick="showConfig()">⚙️ Config</button>
             <button onclick="refreshData()">🔄 Aggiorna</button>
         </div>
@@ -749,15 +749,15 @@
         </div>
         <div class="table-header">
             <h2 id="tableTitle">Events</h2>
-            <button onclick="showQueryConfig()" title="Configura query e titolo">⚙️</button>
+            <button onclick="showQueryConfig()" title="Configure query and title">⚙️</button>
         </div>
         <div class="table-wrapper">
             <table>
                 <thead id="tableHeader">
-                    <tr><th>Caricamento...</th></tr>
+                    <tr><th>Loading...</th></tr>
                 </thead>
                 <tbody id="eventsTableBody">
-                    <tr><td class="loading">Caricamento eventi...</td></tr>
+                    <tr><td class="loading">Loading events...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -766,180 +766,180 @@
     <!-- Modal Configurazione Dynatrace -->
     <div class="modal" id="configModal">
         <div class="modal-content">
-            <h2>Configurazione Dashboard</h2>
+            <h2>Dashboard Configuration</h2>
             
-            <!-- SEZIONE 1: Impostazioni Generali -->
+            <!-- SECTION 1: General Settings -->
             <div style="border-bottom: 1px solid #ddd; padding-bottom: 15px; margin-bottom: 15px;">
-                <h3 style="margin: 0 0 15px 0; font-size: 14px; color: #666; text-transform: uppercase;">📊 Impostazioni Generali</h3>
+                <h3 style="margin: 0 0 15px 0; font-size: 14px; color: #666; text-transform: uppercase;">📊 General Settings</h3>
                 
-                <label>Titolo Dashboard:</label>
+                <label>Dashboard Title:</label>
                 <input type="text" id="dashboardTitle" placeholder="Dashboard Overview">
                 
-                <label>Intervallo Refresh Automatico:</label>
+                <label>Auto-refresh Interval:</label>
                 <select id="configRefreshInterval" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-                    <option value="0">Disabilitato</option>
-                    <option value="30">30 secondi</option>
-                    <option value="60">1 minuto</option>
-                    <option value="120" selected>2 minuti</option>
-                    <option value="300">5 minuti</option>
-                    <option value="600">10 minuti</option>
-                    <option value="1800">30 minuti</option>
-                    <option value="3600">60 minuti</option>
+                    <option value="0">Disabled</option>
+                    <option value="30">30 seconds</option>
+                    <option value="60">1 minute</option>
+                    <option value="120" selected>2 minutes</option>
+                    <option value="300">5 minutes</option>
+                    <option value="600">10 minutes</option>
+                    <option value="1800">30 minutes</option>
+                    <option value="3600">60 minutes</option>
                 </select>
             </div>
             
-            <!-- SEZIONE 2: Connessione Dynatrace -->
+            <!-- SECTION 2: Dynatrace Connection -->
             <div style="border-bottom: 1px solid #ddd; padding-bottom: 15px; margin-bottom: 15px;">
-                <h3 style="margin: 0 0 15px 0; font-size: 14px; color: #666; text-transform: uppercase;">🔗 Connessione Dynatrace</h3>
+                <h3 style="margin: 0 0 15px 0; font-size: 14px; color: #666; text-transform: uppercase;">🔗 Dynatrace Connection</h3>
                 
-                <label>URL Tenant Dynatrace:</label>
+                <label>Dynatrace Tenant URL:</label>
                 <input type="text" id="tenantUrl" placeholder="https://xxx.live.dynatrace.com">
                 
                 <label>API Token:</label>
                 <input type="password" id="apiToken" placeholder="dt0c01.XXX...">
             </div>
             
-            <!-- SEZIONE 3: Configurazione Proxy -->
+            <!-- SECTION 3: Proxy Configuration -->
             <div style="border-bottom: 1px solid #ddd; padding-bottom: 15px; margin-bottom: 15px;">
-                <h3 style="margin: 0 0 15px 0; font-size: 14px; color: #666; text-transform: uppercase;">🔄 Configurazione Proxy</h3>
+                <h3 style="margin: 0 0 15px 0; font-size: 14px; color: #666; text-transform: uppercase;">🔄 Proxy Configuration</h3>
                 
-                <label>Modalità Proxy:</label>
+                <label>Proxy Mode:</label>
                 <select id="deployMode" onchange="onDeployModeChange()" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; margin-bottom: 15px;">
                     <option value="proxy">Python Proxy (localhost)</option>
                     <option value="php-proxy">PHP Proxy (webserver)</option>
                 </select>
                 
-                <!-- Configurazione Python Proxy -->
+                <!-- Python Proxy Configuration -->
                 <div id="pythonProxyConfig">
                     <div class="info-box">
-                        <strong>ℹ️ Python Proxy:</strong> Richiede <code>proxy_server.py</code> in esecuzione sul tuo computer.
-                        <br>Avvia con: <code>python3 proxy_server.py</code>
+                        <strong>ℹ️ Python Proxy:</strong> Requires <code>proxy_server.py</code> running on your computer.
+                        <br>Start with: <code>python3 proxy_server.py</code>
                     </div>
                     
-                    <label>URL Proxy Python:</label>
+                    <label>Python Proxy URL:</label>
                     <input type="text" id="proxyUrlPython" value="http://localhost:8081" placeholder="http://localhost:8081">
                     
                     <label style="display: flex; align-items: center; gap: 8px; margin-top: 15px;">
                         <input type="checkbox" id="enableProxyLogging" style="width: auto; margin: 0;">
-                        Abilita logging dettagliato (stampa request/response nella console Python)
+                        Enable detailed logging (prints request/response in Python console)
                     </label>
                 </div>
                 
-                <!-- Configurazione PHP Proxy -->
+                <!-- PHP Proxy Configuration -->
                 <div id="phpProxyConfig" style="display: none;">
                     <div class="info-box">
-                        <strong>ℹ️ PHP Proxy:</strong> Richiede <code>proxy.php</code> caricato sul tuo webserver.
+                        <strong>ℹ️ PHP Proxy:</strong> Requires <code>proxy.php</code> uploaded to your webserver.
                     </div>
                     
-                    <label>URL Proxy PHP:</label>
+                    <label>PHP Proxy URL:</label>
                     <input type="text" id="proxyUrlPHP" placeholder="https://tuo-dominio.com/proxy.php">
                     
                     <label>Proxy API Key:</label>
                     <input type="password" id="proxyApiKey" placeholder="Chiave configurata in proxy.php">
                     <div style="font-size: 12px; color: #666; margin-top: 5px;">
-                        Deve corrispondere alla chiave <code>PROXY_API_KEY</code> configurata in proxy.php
+                        Must match the <code>PROXY_API_KEY</code> configured in proxy.php
                     </div>
                 </div>
             </div>
             
-            <!-- SEZIONE 4: Gestione Configurazione -->
+            <!-- SECTION 4: Configuration Management -->
             <div>
-                <h3 style="margin: 0 0 15px 0; font-size: 14px; color: #666; text-transform: uppercase;">💾 Gestione Configurazione</h3>
+                <h3 style="margin: 0 0 15px 0; font-size: 14px; color: #666; text-transform: uppercase;">💾 Configuration Management</h3>
                 <div style="display: flex; gap: 10px;">
-                    <button onclick="exportSettings()" style="flex: 1; background: #28a745;">📥 Esporta</button>
-                    <button onclick="importSettings()" style="flex: 1; background: #17a2b8;">📤 Importa</button>
+                    <button onclick="exportSettings()" style="flex: 1; background: #28a745;">📥 Export</button>
+                    <button onclick="importSettings()" style="flex: 1; background: #17a2b8;">📤 Import</button>
                 </div>
                 <input type="file" id="importFileInput" accept=".json" style="display: none;" onchange="handleImportFile(event)">
             </div>
             
             <div class="button-group">
-                <button onclick="saveConfig()">Salva</button>
-                <button class="secondary" onclick="closeModal('configModal')">Annulla</button>
+                <button onclick="saveConfig()">Save</button>
+                <button class="secondary" onclick="closeModal('configModal')">Cancel</button>
             </div>
         </div>
     </div>
 
-    <!-- Modal Configurazione Query Tabella -->
+    <!-- Table Query Configuration Modal -->
     <div class="modal" id="queryModal">
         <div class="modal-content">
-            <h2>Configura Tabella</h2>
+            <h2>Configure Table</h2>
             
             <div class="info-box">
-                <strong>💡 Suggerimento:</strong> La query deve restituire i campi da visualizzare.
-                <br>Usa <code>${{VARIABILE}}</code> per le variabili globali.
+                <strong>💡 Tip:</strong> The query must return the fields to display.
+                <br>Use <code>${{VARIABLE}}</code> for global variables.
             </div>
             
-            <label>Titolo Tabella:</label>
+            <label>Table Title:</label>
             <input type="text" id="tableCustomTitle" placeholder="Events">
             
-            <label>Query DQL:</label>
+            <label>DQL Query:</label>
             <textarea id="customQuery" placeholder="fetch events | filter ... | fields ..."></textarea>
             
             <div class="button-group">
-                <button onclick="saveCustomQuery()">Salva e Applica</button>
-                <button class="danger" onclick="resetToDefaultQuery()">Ripristina Default</button>
-                <button class="secondary" onclick="closeModal('queryModal')">Annulla</button>
+                <button onclick="saveCustomQuery()">Save and Apply</button>
+                <button class="danger" onclick="resetToDefaultQuery()">Reset to Default</button>
+                <button class="secondary" onclick="closeModal('queryModal')">Cancel</button>
             </div>
         </div>
     </div>
 
-    <!-- Modal Configurazione Tile -->
+    <!-- Tile Configuration Modal -->
     <div class="modal" id="tileModal">
         <div class="modal-content">
-            <h2>Configura Tile</h2>
+            <h2>Configure Tile</h2>
             
             <div class="info-box">
-                <strong>💡 Info:</strong> La query deve restituire i seguenti campi:
-                <br>• Nome (da mostrare nell'esagono)
+                <strong>💡 Info:</strong> The query must return the following fields:
+                <br>• Name (to display in the hexagon)
                 <br>• Status/Level (OK, WARN, ALERT)
-                <br>• Link (opzionale, per rendere l'esagono cliccabile)
-                <br>Usa <code>${{VARIABILE}}</code> per le variabili globali.
+                <br>• Link (optional, to make the hexagon clickable)
+                <br>Use <code>${{VARIABLE}}</code> for global variables.
             </div>
             
-            <label>Titolo Tile:</label>
+            <label>Tile Title:</label>
             <input type="text" id="tileTitle" placeholder="Overview Region">
             
             <label>Query DQL:</label>
             <textarea id="tileQuery" placeholder="fetch ... | fields name, status, link"></textarea>
             
-            <label>Nome Campo "Nome":</label>
+            <label>"Name" Field:</label>
             <input type="text" id="tileNameField" placeholder="name" value="name">
             
-            <label>Nome Campo "Status":</label>
+            <label>"Status" Field:</label>
             <input type="text" id="tileStatusField" placeholder="status" value="status">
             
-            <label>Nome Campo "Link" (opzionale):</label>
+            <label>"Link" Field (optional):</label>
             <input type="text" id="tileLinkField" placeholder="link" value="link">
             
             <div class="button-group">
-                <button onclick="saveTileConfig()">Salva e Applica</button>
-                <button class="secondary" onclick="closeModal('tileModal')">Annulla</button>
+                <button onclick="saveTileConfig()">Save and Apply</button>
+                <button class="secondary" onclick="closeModal('tileModal')">Cancel</button>
             </div>
         </div>
     </div>
 
-    <!-- Modal Variabili Globali -->
+    <!-- Global Variables Modal -->
     <div class="modal" id="variablesModal">
         <div class="modal-content">
-            <h2>Variabili Globali</h2>
+            <h2>Global Variables</h2>
             
             <div class="info-box">
-                <strong>💡 Info:</strong> Le variabili possono essere usate nelle query con <code>${{NOME}}</code>
-                <br>Esempio: <code>filter region == "${{REGION}}"</code>
+                <strong>💡 Info:</strong> Variables can be used in queries with <code>${{NAME}}</code>
+                <br>Example: <code>filter region == "${{REGION}}"</code>
                 <br><br>
-                <strong>Variabili automatiche disponibili:</strong>
-                <br>• <code>${{TIMEFRAME_START}}</code> - Timestamp inizio timeframe (ISO 8601: 2025-11-20T14:36:00.000Z)
-                <br>• <code>${{TIMEFRAME_END}}</code> - Timestamp fine timeframe (ISO 8601: 2025-11-20T14:36:00.000Z)
-                <br>Esempio: <code>filter timestamp >= toTimestamp("${{TIMEFRAME_START}}") and timestamp <= toTimestamp("${{TIMEFRAME_END}}")</code>
+                <strong>Automatic variables available:</strong>
+                <br>• <code>${{TIMEFRAME_START}}</code> - Timeframe start timestamp (ISO 8601: 2025-11-20T14:36:00.000Z)
+                <br>• <code>${{TIMEFRAME_END}}</code> - Timeframe end timestamp (ISO 8601: 2025-11-20T14:36:00.000Z)
+                <br>Example: <code>filter timestamp >= toTimestamp("${{TIMEFRAME_START}}") and timestamp <= toTimestamp("${{TIMEFRAME_END}}")</code>
             </div>
             
-            <button class="add-variable-btn" onclick="addVariableRow()">+ Aggiungi Variabile</button>
+            <button class="add-variable-btn" onclick="addVariableRow()">+ Add Variable</button>
             
             <div id="variablesContainer"></div>
             
             <div class="button-group">
-                <button onclick="saveVariables()">Salva</button>
-                <button class="secondary" onclick="closeModal('variablesModal')">Annulla</button>
+                <button onclick="saveVariables()">Save</button>
+                <button class="secondary" onclick="closeModal('variablesModal')">Cancel</button>
             </div>
         </div>
     </div>
@@ -1082,7 +1082,7 @@
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
             
-            alert('Impostazioni esportate con successo!');
+            alert('Settings exported successfully!');
         }
 
         function importSettings() {
@@ -1104,7 +1104,7 @@
                     }
 
                     // Conferma importazione
-                    if (!confirm('Importare le impostazioni? Questo sovrascriverà la configurazione attuale.')) {
+                    if (!confirm('Import settings? This will overwrite the current configuration.')) {
                         return;
                     }
 
@@ -1140,10 +1140,10 @@
                         dashboardTitle = settings.dashboardTitle;
                     }
 
-                    alert('Impostazioni importate con successo! La pagina verrà ricaricata.');
+                    alert('Settings imported successfully! The page will reload.');
                     location.reload();
                 } catch (error) {
-                    alert('Errore nell\'importazione: ' + error.message);
+                    alert('Import error: ' + error.message);
                 }
             };
             reader.readAsText(file);
@@ -1212,12 +1212,12 @@
             }
             
             if (!tenantUrl || !apiToken) {
-                alert('Inserisci URL del tenant e API token');
+                alert('Please enter tenant URL and API token');
                 return;
             }
             
             if (deployMode === 'php-proxy' && !proxyUrl) {
-                alert('Inserisci URL del proxy PHP');
+                alert('Please enter PHP proxy URL');
                 return;
             }
 
@@ -1226,7 +1226,7 @@
             try {
                 new URL(tenantUrl);
             } catch (e) {
-                alert('URL del tenant non valido');
+                alert('Invalid tenant URL');
                 return;
             }
 
@@ -1261,7 +1261,7 @@
         function updateProxyStatus(isOnline) {
             const indicator = document.getElementById('proxyStatus');
             indicator.className = 'status-indicator ' + (isOnline ? 'online' : 'offline');
-            indicator.title = isOnline ? 'Proxy connesso' : 'Proxy non raggiungibile';
+            indicator.title = isOnline ? 'Proxy connected' : 'Proxy unreachable';
         }
 
         // ==================== GESTIONE TIMEFRAME ====================
@@ -1537,7 +1537,7 @@
             const title = document.getElementById('tableCustomTitle').value.trim() || 'Events';
             
             if (!query) {
-                alert('Inserisci una query DQL valida');
+                alert('Please enter a valid DQL query');
                 return;
             }
 
@@ -1552,7 +1552,7 @@
         }
 
         function resetToDefaultQuery() {
-            if (confirm('Ripristinare la query e il titolo di default?')) {
+            if (confirm('Reset query and title to default?')) {
                 customTableQuery = DEFAULT_TABLE_QUERY;
                 customTableTitle = 'Events';
                 localStorage.setItem(TABLE_QUERY_KEY, DEFAULT_TABLE_QUERY);
@@ -1578,10 +1578,10 @@
                 card.innerHTML = `
                     <div class="card-header">
                         <h2>${tile.title}</h2>
-                        <button class="config-tile-btn" onclick="showTileConfig('${tile.id}')" title="Configura tile">⚙️</button>
+                        <button class="config-tile-btn" onclick="showTileConfig('${tile.id}')" title="Configure tile">⚙️</button>
                     </div>
                     <div class="hexagons" id="hexagons-${tile.id}">
-                        <div class="loading">Caricamento...</div>
+                        <div class="loading">Loading...</div>
                     </div>
                 `;
                 container.appendChild(card);
@@ -1613,7 +1613,7 @@
             const linkField = document.getElementById('tileLinkField').value.trim();
             
             if (!title || !query || !nameField || !statusField) {
-                alert('Compila tutti i campi obbligatori');
+                alert('Please fill in all required fields');
                 return;
             }
             
@@ -1688,7 +1688,7 @@
             if (!container) return;
             
             try {
-                container.innerHTML = '<div class="loading">Caricamento...</div>';
+                container.innerHTML = '<div class="loading">Loading...</div>';
                 
                 const queryWithVars = replaceVariables(tile.query);
                 const result = await executeDQL(queryWithVars, tile.title);
@@ -1710,10 +1710,10 @@
                     });
                 } else {
                     container.removeAttribute('data-count');
-                    container.innerHTML = '<div style="text-align:center;color:#666;">Nessun dato</div>';
+                    container.innerHTML = '<div style="text-align:center;color:#666;">No data</div>';
                 }
             } catch (error) {
-                console.error(`Errore caricamento tile ${tile.id}:`, error);
+                console.error(`Error loading tile ${tile.id}:`, error);
                 container.removeAttribute('data-count');
                 container.innerHTML = '<div style="text-align:center;color:red;">Errore</div>';
             }
@@ -1739,8 +1739,8 @@
             const tbody = document.getElementById('eventsTableBody');
             
             if (!data || data.length === 0) {
-                tableHeader.innerHTML = '<tr><th>Risultati</th></tr>';
-                tbody.innerHTML = '<tr><td style="text-align:center;">Nessun risultato</td></tr>';
+                tableHeader.innerHTML = '<tr><th>Results</th></tr>';
+                tbody.innerHTML = '<tr><td style="text-align:center;">No results</td></tr>';
                 return;
             }
             
@@ -1805,7 +1805,7 @@
                         // Formatta timestamp
                         const numVal = typeof value === 'string' ? parseFloat(value) : value;
                         if (!isNaN(numVal)) {
-                            value = new Date(numVal).toLocaleString('it-IT');
+                            value = new Date(numVal).toLocaleString();
                         }
                     } else if (column.toLowerCase() === 'duration' || column.toLowerCase() === 'durata') {
                         // Formatta duration in formato leggibile (gestisce sia numeri che stringhe)
@@ -1856,17 +1856,17 @@
                     
                     const headerRow = document.createElement('tr');
                     const th = document.createElement('th');
-                    th.textContent = 'Risultati';
+                    th.textContent = 'Results';
                     headerRow.appendChild(th);
                     tableHeader.innerHTML = '';
                     tableHeader.appendChild(headerRow);
                     
-                    tbody.innerHTML = '<tr><td style="text-align:center;">Nessun risultato</td></tr>';
+                    tbody.innerHTML = '<tr><td style="text-align:center;">No results</td></tr>';
                 }
             } catch (error) {
-                console.error('Errore caricamento eventi:', error);
+                console.error('Error loading events:', error);
                 const errorMsg = error.message.includes('Failed to fetch') 
-                    ? 'Proxy non raggiungibile' 
+                    ? 'Proxy unreachable' 
                     : error.message;
                 
                 currentTableData = [];
@@ -2013,9 +2013,9 @@
             
             if (config) {
                 if (config.deployMode === 'php-proxy') {
-                    indicator.title = isOnline ? 'PHP Proxy connesso' : 'PHP Proxy non raggiungibile';
+                    indicator.title = isOnline ? 'PHP Proxy connected' : 'PHP Proxy unreachable';
                 } else {
-                    indicator.title = isOnline ? 'Python Proxy connesso' : 'Python Proxy non raggiungibile';
+                    indicator.title = isOnline ? 'Python Proxy connected' : 'Python Proxy unreachable';
                 }
             }
         }
