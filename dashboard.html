@@ -732,7 +732,7 @@
             </div>
             <button onclick="showVariablesConfig()">📋 Variables</button>
             <button onclick="showConfig()">⚙️ Config</button>
-            <button onclick="refreshData()">🔄 Aggiorna</button>
+            <button onclick="refreshData()">🔄 Refresh</button>
         </div>
     </div>
 
@@ -744,7 +744,7 @@
         <div class="table-loading-overlay" id="tableLoadingOverlay">
             <div class="table-loading-content">
                 <div class="table-spinner"></div>
-                <div class="table-loading-text">Aggiornamento dati...</div>
+                <div class="table-loading-text">Loading data...</div>
             </div>
         </div>
         <div class="table-header">
@@ -965,10 +965,10 @@
 | fields timestampOrg=timestamp,
  timestamp=formatTimestamp(timestamp, format: "dd/MM/yyyy HH:mm:ss.SSS"),
  display_id,
- host.name,
+ event.name,
  event.status,
  event.description,
- duration=toDuration(event.end-event.start),
+ duration=if(isNotNull(event.end),toDuration(event.end-event.start),else:toDuration(now()-event.start)),
  event.start=formatTimestamp(event.start, format: "dd/MM/yyyy HH:mm:ss.SSS"), 
  event.end=formatTimestamp(event.end, format: "dd/MM/yyyy HH:mm:ss.SSS")
 | fieldsAdd day = formatTimestamp(timestampOrg, format: "dd/MM/yyyy")
@@ -979,7 +979,7 @@
             {
                 id: 'tile1',
                 title: 'Region 1',
-                query: 'fetch dt.entity.host | limit 3 | fields entity.name | fieldsAdd status = "OK", link = ""',
+                query: 'fetch dt.entity.host | limit 3 | fields entity.name=substring(entity.name,to:10) | fieldsAdd status = "OK", link = ""',
                 nameField: 'entity.name',
                 statusField: 'status',
                 linkField: 'link'
