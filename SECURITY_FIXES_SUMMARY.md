@@ -63,6 +63,7 @@ async function loadConfig() {
 - ✅ Prevents accidental exposure in DevTools
 - ✅ Transparent to users (automatic)
 - ✅ Backward compatible with old configs
+- ✅ **Automatic Migration:** Users with old plaintext configs are automatically upgraded and notified
 
 **Limitations:**
 - ⚠️ Determined attacker with browser access can still decrypt
@@ -70,6 +71,14 @@ async function loadConfig() {
 - 💡 For production: use server-side authentication
 
 **Documentation:** See [ENCRYPTION_DETAILS.md](ENCRYPTION_DETAILS.md) for full technical specifications.
+
+**Automatic Migration:**
+When users with old plaintext configurations open the upgraded dashboard:
+1. The system detects unencrypted configs automatically
+2. Encrypts all sensitive credentials (apiToken, proxyApiKey)
+3. Updates localStorage with encrypted versions
+4. Shows a friendly notification informing users about the security upgrade
+5. Dashboard continues working seamlessly with no user action required
 
 ---
 
