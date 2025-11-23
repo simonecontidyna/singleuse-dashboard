@@ -18,6 +18,7 @@ The dashboard can run locally or on a public webserver using either a Python or 
 
 This dashboard includes multiple security enhancements:
 
+- ✅ **Encrypted Storage:** API tokens and keys encrypted using AES-256-GCM before localStorage
 - ✅ **XSS Protection:** DOMPurify sanitization for all user inputs
 - ✅ **API Key Authentication:** Proxy server requires authentication
 - ✅ **CORS Restrictions:** Limited to localhost origins
@@ -132,7 +133,7 @@ Assign scopes based on your query requirements:
 
 ⚠️ **Important Security Notes:**
 
-1. **API Keys Storage:** Dynatrace API tokens are stored in browser localStorage. For production use, consider implementing a backend service.
+1. **Encrypted Storage:** API tokens and proxy keys are encrypted using AES-256-GCM with PBKDF2 key derivation before being stored in localStorage. This protects against casual inspection and makes token theft more difficult, though determined attackers with browser access could potentially decrypt the data.
 
 2. **Python Proxy:** The proxy generates a random API key on startup. Set `PROXY_API_KEY` environment variable for persistent keys.
 
@@ -141,6 +142,8 @@ Assign scopes based on your query requirements:
 4. **XSS Protection:** The dashboard uses DOMPurify to sanitize all user inputs, but avoid pasting untrusted DQL queries.
 
 5. **CORS:** The Python proxy restricts CORS to localhost by default. Modify `ALLOWED_ORIGINS` in `proxy_server.py` if needed.
+
+6. **Production Use:** For production environments, consider implementing a proper backend service with server-side authentication instead of browser-based storage.
 
 For a detailed security analysis, see [SECURITY_REPORT.md](SECURITY_REPORT.md).
 

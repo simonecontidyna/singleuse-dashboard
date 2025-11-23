@@ -960,8 +960,110 @@
         const VARIABLES_KEY = 'global_variables';
         const TABLE_QUERY_KEY = 'custom_table_query';
         const TABLE_TITLE_KEY = 'custom_table_title';
+        const CRYPTO_SALT_KEY = 'crypto_salt';
 
-        let config = loadConfig();
+        // ==================== ENCRYPTION UTILITIES ====================
+
+        async function getCryptoKey() {
+            // Get or generate a salt for key derivation
+            let salt = localStorage.getItem(CRYPTO_SALT_KEY);
+            if (!salt) {
+                // Generate new random salt
+                const saltArray = new Uint8Array(16);
+                crypto.getRandomValues(saltArray);
+                salt = Array.from(saltArray).map(b => b.toString(16).padStart(2, '0')).join('');
+                localStorage.setItem(CRYPTO_SALT_KEY, salt);
+            }
+
+            // Convert salt back to Uint8Array
+            const saltArray = new Uint8Array(salt.match(/.{2}/g).map(byte => parseInt(byte, 16)));
+
+            // Derive a key from a base secret + salt
+            // Note: This provides obfuscation, not true security against determined attackers
+            // For production, consider using a user password or server-side encryption
+            const baseKey = await crypto.subtle.importKey(
+                'raw',
+                new TextEncoder().encode('dynatrace-dashboard-encryption-v1'),
+                { name: 'PBKDF2' },
+                false,
+                ['deriveBits', 'deriveKey']
+            );
+
+            // Derive actual encryption key
+            const key = await crypto.subtle.deriveKey(
+                {
+                    name: 'PBKDF2',
+                    salt: saltArray,
+                    iterations: 100000,
+                    hash: 'SHA-256'
+                },
+                baseKey,
+                { name: 'AES-GCM', length: 256 },
+                false,
+                ['encrypt', 'decrypt']
+            );
+
+            return key;
+        }
+
+        async function encryptData(plaintext) {
+            if (!plaintext) return null;
+
+            try {
+                const key = await getCryptoKey();
+                const iv = crypto.getRandomValues(new Uint8Array(12)); // 12 bytes IV for AES-GCM
+                const encodedText = new TextEncoder().encode(plaintext);
+
+                const ciphertext = await crypto.subtle.encrypt(
+                    { name: 'AES-GCM', iv: iv },
+                    key,
+                    encodedText
+                );
+
+                // Combine IV and ciphertext for storage
+                const combined = new Uint8Array(iv.length + ciphertext.byteLength);
+                combined.set(iv, 0);
+                combined.set(new Uint8Array(ciphertext), iv.length);
+
+                // Convert to base64 for storage
+                return btoa(String.fromCharCode.apply(null, combined));
+            } catch (error) {
+                console.error('Encryption failed:', error);
+                return plaintext; // Fallback to plaintext if encryption fails
+            }
+        }
+
+        async function decryptData(encryptedData) {
+            if (!encryptedData) return null;
+
+            try {
+                const key = await getCryptoKey();
+
+                // Decode base64
+                const combined = new Uint8Array(
+                    atob(encryptedData).split('').map(c => c.charCodeAt(0))
+                );
+
+                // Extract IV and ciphertext
+                const iv = combined.slice(0, 12);
+                const ciphertext = combined.slice(12);
+
+                const decrypted = await crypto.subtle.decrypt(
+                    { name: 'AES-GCM', iv: iv },
+                    key,
+                    ciphertext
+                );
+
+                return new TextDecoder().decode(decrypted);
+            } catch (error) {
+                console.error('Decryption failed:', error);
+                return encryptedData; // Fallback to returning as-is
+            }
+        }
+
+        // ==================== END ENCRYPTION UTILITIES ====================
+
+        let config = null; // Will be loaded async in DOMContentLoaded
         let preferences = loadPreferences();
         let currentTimeframe = preferences.timeframe || '2h';
         let refreshInterval = preferences.refreshInterval || 120;
@@ -1047,13 +1149,32 @@
 
         // ==================== FUNZIONI DI CONFIGURAZIONE ====================
 
-        function loadConfig() {
+        async function loadConfig() {
             const stored = localStorage.getItem(CONFIG_KEY);
             if (stored) {
                 const cfg = JSON.parse(stored);
+
+                // Decrypt sensitive fields if they are encrypted
+                if (cfg.apiToken && cfg.encrypted !== false) {
+                    try {
+                        cfg.apiToken = await decryptData(cfg.apiToken);
+                    } catch (e) {
+                        console.error('Failed to decrypt API token:', e);
+                    }
+                }
+
+                if (cfg.proxyApiKey && cfg.encrypted !== false) {
+                    try {
+                        cfg.proxyApiKey = await decryptData(cfg.proxyApiKey);
+                    } catch (e) {
+                        console.error('Failed to decrypt proxy API key:', e);
+                    }
+                }
+
                 if (!cfg.proxyUrl) cfg.proxyUrl = 'http://localhost:8081';
                 if (!cfg.deployMode) cfg.deployMode = 'proxy';
                 if (!cfg.proxyApiKey) cfg.proxyApiKey = '';
+
                 return cfg;
             }
             return null;
@@ -1072,10 +1193,15 @@
         }
 
         function exportSettings() {
+            // Export with decrypted values (config is already decrypted in memory)
+            // Remove the 'encrypted' flag for export
+            const exportConfig = { ...config };
+            delete exportConfig.encrypted;
+
             const settings = {
-                version: '1.0',
+                version: '1.1',  // Incremented version for encrypted format
                 exportDate: new Date().toISOString(),
-                config: config,
+                config: exportConfig,
                 preferences: {
                     timeframe: currentTimeframe,
                     refreshInterval: refreshInterval
@@ -1096,7 +1222,7 @@
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            
+
             alert('Settings exported successfully!');
         }
 
@@ -1104,15 +1230,15 @@
             document.getElementById('importFileInput').click();
         }
 
-        function handleImportFile(event) {
+        async function handleImportFile(event) {
             const file = event.target.files[0];
             if (!file) return;
 
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = async function(e) {
                 try {
                     const settings = JSON.parse(e.target.result);
-                    
+
                     // Valida il formato
                     if (!settings.version || !settings.config) {
                         throw new Error('File non valido');
@@ -1125,8 +1251,18 @@
 
                     // Importa tutte le impostazioni
                     if (settings.config) {
-                        localStorage.setItem(CONFIG_KEY, JSON.stringify(settings.config));
-                        config = settings.config;
+                        // Encrypt sensitive fields before saving
+                        const importedConfig = settings.config;
+                        if (importedConfig.apiToken) {
+                            importedConfig.apiToken = await encryptData(importedConfig.apiToken);
+                        }
+                        if (importedConfig.proxyApiKey) {
+                            importedConfig.proxyApiKey = await encryptData(importedConfig.proxyApiKey);
+                        }
+                        importedConfig.encrypted = true;
+
+                        localStorage.setItem(CONFIG_KEY, JSON.stringify(importedConfig));
+                        config = await loadConfig(); // Reload with decryption
                     }
                     if (settings.preferences) {
                         localStorage.setItem(PREFERENCES_KEY, JSON.stringify(settings.preferences));
@@ -1162,19 +1298,22 @@
                 }
             };
             reader.readAsText(file);
-            
+
             // Reset input per permettere re-import dello stesso file
             event.target.value = '';
         }
 
-        function showConfig() {
+        async function showConfig() {
             document.getElementById('configModal').classList.add('active');
             if (config) {
                 document.getElementById('tenantUrl').value = config.tenantUrl || '';
+
+                // Show decrypted values (already decrypted in memory after loadConfig)
                 document.getElementById('apiToken').value = config.apiToken || '';
+
                 document.getElementById('deployMode').value = config.deployMode || 'proxy';
                 document.getElementById('enableProxyLogging').checked = config.enableLogging || false;
-                
+
                 // Popola i campi proxy in base alla modalità salvata
                 if (config.deployMode === 'php-proxy') {
                     document.getElementById('proxyUrlPHP').value = config.proxyUrl || '';
@@ -1190,7 +1329,7 @@
             }
             document.getElementById('dashboardTitle').value = dashboardTitle;
             document.getElementById('configRefreshInterval').value = refreshInterval.toString();
-            
+
             // Mostra/nascondi configurazione proxy
             onDeployModeChange();
         }
@@ -1209,14 +1348,14 @@
             }
         }
 
-        function saveConfig() {
+        async function saveConfig() {
             let tenantUrl = document.getElementById('tenantUrl').value.trim();
             const apiToken = document.getElementById('apiToken').value.trim();
             const deployMode = document.getElementById('deployMode').value;
             const enableLogging = document.getElementById('enableProxyLogging').checked;
             const newDashboardTitle = document.getElementById('dashboardTitle').value.trim() || 'Dashboard Overview';
             const newRefreshInterval = parseInt(document.getElementById('configRefreshInterval').value);
-            
+
             // Leggi proxy URL e API key dal campo corretto in base alla modalità
             let proxyUrl, proxyApiKey;
             if (deployMode === 'php-proxy') {
@@ -1228,19 +1367,19 @@
                 const proxyApiKeyRaw = document.getElementById('proxyApiKeyPython').value;
                 proxyApiKey = proxyApiKeyRaw ? proxyApiKeyRaw.trim() : '';
             }
-            
+
             if (!tenantUrl || !apiToken) {
                 alert('Please enter tenant URL and API token');
                 return;
             }
-            
+
             if (deployMode === 'php-proxy' && !proxyUrl) {
                 alert('Please enter PHP proxy URL');
                 return;
             }
 
             tenantUrl = tenantUrl.replace(/\/+$/, '');
-            
+
             try {
                 new URL(tenantUrl);
             } catch (e) {
@@ -1248,21 +1387,37 @@
                 return;
             }
 
-            // Salva configurazione
-            config = { tenantUrl, apiToken, proxyUrl, proxyApiKey, deployMode, enableLogging };
+            // Encrypt sensitive fields before storing
+            const encryptedApiToken = await encryptData(apiToken);
+            const encryptedProxyApiKey = proxyApiKey ? await encryptData(proxyApiKey) : '';
+
+            // Salva configurazione con campi criptati
+            config = {
+                tenantUrl,
+                apiToken: encryptedApiToken,
+                proxyUrl,
+                proxyApiKey: encryptedProxyApiKey,
+                deployMode,
+                enableLogging,
+                encrypted: true  // Flag to indicate data is encrypted
+            };
             localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
-            
+
+            // Update in-memory config with decrypted values
+            config.apiToken = apiToken;
+            config.proxyApiKey = proxyApiKey;
+
             // Salva titolo dashboard
             dashboardTitle = newDashboardTitle;
             localStorage.setItem('dashboard_title', dashboardTitle);
             setDashboardTitle(dashboardTitle);
-            
+
             // Salva refresh interval
             refreshInterval = newRefreshInterval;
             savePreferences();
             document.getElementById('refreshInterval').value = refreshInterval.toString();
             setupAutoRefresh();
-            
+
             closeModal('configModal');
             refreshData();
         }
@@ -2182,20 +2337,23 @@
 
         // ==================== INIZIALIZZAZIONE ====================
 
-        window.addEventListener('DOMContentLoaded', () => {
+        window.addEventListener('DOMContentLoaded', async () => {
             updateProxyStatus(false);
-            
+
+            // Load config asynchronously (with encryption)
+            config = await loadConfig();
+
             // Ripristina preferenze
             document.getElementById('timeframeSelector').value = currentTimeframe;
             document.getElementById('refreshInterval').value = refreshInterval;
             document.getElementById('tableTitle').textContent = customTableTitle;
-            
+
             // Imposta il titolo dashboard
             setDashboardTitle(dashboardTitle);
-            
+
             // Renderizza i tile
             renderTiles();
-            
+
             if (!config) {
                 showConfig();
             } else {
@@ -2204,7 +2362,7 @@
             }
 
             setupAutoRefresh();
-            
+
             // Verifica connessione periodicamente
             setInterval(checkConnection, 10000); // Ogni 10 secondi
         });
