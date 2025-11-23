@@ -6,6 +6,8 @@
     <title>Dashboard Overview</title>
     <link rel="icon" type="image/x-icon" href="https://dt-cdn.net/favicon.ico">
     <link rel="shortcut icon" type="image/x-icon" href="https://dt-cdn.net/favicon.ico">
+    <!-- DOMPurify for XSS protection -->
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -818,7 +820,13 @@
                     
                     <label>Python Proxy URL:</label>
                     <input type="text" id="proxyUrlPython" value="http://localhost:8081" placeholder="http://localhost:8081">
-                    
+
+                    <label>Python Proxy API Key:</label>
+                    <input type="password" id="proxyApiKeyPython" placeholder="Enter the API key shown in proxy console">
+                    <div style="font-size: 12px; color: #666; margin-top: 5px;">
+                        Copy the API key from the proxy server console output
+                    </div>
+
                     <label style="display: flex; align-items: center; gap: 8px; margin-top: 15px;">
                         <input type="checkbox" id="enableProxyLogging" style="width: auto; margin: 0;">
                         Enable detailed logging (prints request/response in Python console)
@@ -1172,10 +1180,12 @@
                     document.getElementById('proxyUrlPHP').value = config.proxyUrl || '';
                     document.getElementById('proxyApiKey').value = config.proxyApiKey || '';
                     document.getElementById('proxyUrlPython').value = 'http://localhost:8081';
+                    document.getElementById('proxyApiKeyPython').value = '';
                 } else {
                     document.getElementById('proxyUrlPython').value = config.proxyUrl || 'http://localhost:8081';
+                    document.getElementById('proxyApiKeyPython').value = config.proxyApiKey || '';
                     document.getElementById('proxyUrlPHP').value = '';
-                    document.getElementById('proxyApiKey').value = config.proxyApiKey || '';
+                    document.getElementById('proxyApiKey').value = '';
                 }
             }
             document.getElementById('dashboardTitle').value = dashboardTitle;
@@ -1215,7 +1225,8 @@
                 proxyApiKey = proxyApiKeyRaw ? proxyApiKeyRaw.trim() : '';
             } else {
                 proxyUrl = document.getElementById('proxyUrlPython').value.trim() || 'http://localhost:8081';
-                proxyApiKey = '';
+                const proxyApiKeyRaw = document.getElementById('proxyApiKeyPython').value;
+                proxyApiKey = proxyApiKeyRaw ? proxyApiKeyRaw.trim() : '';
             }
             
             if (!tenantUrl || !apiToken) {
@@ -1244,12 +1255,7 @@
             // Salva titolo dashboard
             dashboardTitle = newDashboardTitle;
             localStorage.setItem('dashboard_title', dashboardTitle);
-            document.querySelector('.header h1').innerHTML = `
-                <img src="https://companieslogo.com/img/orig/DT-89e31c0c.png?t=1720244491" 
-                     alt="Dynatrace" style="width: 32px; height: 32px; vertical-align: middle; margin-right: 10px;">
-                ${dashboardTitle}
-                <span class="status-indicator" id="proxyStatus"></span>
-            `;
+            setDashboardTitle(dashboardTitle);
             
             // Salva refresh interval
             refreshInterval = newRefreshInterval;
@@ -1356,30 +1362,105 @@
             return result;
         }
 
+        function isValidUrl(url) {
+            // Only allow http and https protocols
+            try {
+                const parsedUrl = new URL(url);
+                return parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:';
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function setDashboardTitle(title) {
+            // Safely set dashboard title without XSS vulnerability
+            const h1 = document.querySelector('.header h1');
+            if (!h1) return;
+
+            // Clear existing content
+            h1.textContent = '';
+
+            // Create and append logo image
+            const img = document.createElement('img');
+            img.src = 'https://companieslogo.com/img/orig/DT-89e31c0c.png?t=1720244491';
+            img.alt = 'Dynatrace';
+            img.style.width = '32px';
+            img.style.height = '32px';
+            img.style.verticalAlign = 'middle';
+            img.style.marginRight = '10px';
+            h1.appendChild(img);
+
+            // Add title as text node (safe from XSS)
+            const titleText = document.createTextNode(title);
+            h1.appendChild(titleText);
+
+            // Add status indicator
+            let statusSpan = document.getElementById('proxyStatus');
+            if (!statusSpan) {
+                statusSpan = document.createElement('span');
+                statusSpan.className = 'status-indicator';
+                statusSpan.id = 'proxyStatus';
+            }
+            h1.appendChild(statusSpan);
+        }
+
         function renderMarkdown(text) {
             if (!text || typeof text !== 'string') return text;
-            
-            let html = text;
-            
-            // Ordine importante: processare prima gli elementi più specifici
-            
-            // Code: `code` (prima di tutto per evitare che venga processato)
+
+            // First, HTML encode to prevent XSS
+            const encoded = text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#x27;');
+
+            let html = encoded;
+
+            // Apply markdown transformations (now safe since HTML is encoded)
+
+            // Code: `code`
             html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-            
+
             // Bold: **text** o __text__
             html = html.replace(/\*\*([^\*]+)\*\*/g, '<strong>$1</strong>');
             html = html.replace(/__([^_]+)__/g, '<strong>$1</strong>');
-            
+
             // Strikethrough: ~~text~~
             html = html.replace(/~~([^~]+)~~/g, '<del>$1</del>');
-            
-            // Italic: *text* o _text_ (dopo bold per evitare conflitti)
+
+            // Italic: *text* o _text_
             html = html.replace(/\*([^\*\n]+)\*/g, '<em>$1</em>');
             html = html.replace(/_([^_\n]+)_/g, '<em>$1</em>');
-            
-            // Link: [text](url)
-            html = html.replace(/\[([^\]]+)\]\(([^\)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
-            
+
+            // Link: [text](url) - with URL validation
+            html = html.replace(/\[([^\]]+)\]\(([^\)]+)\)/g, function(match, text, url) {
+                // Decode the URL for validation
+                const decodedUrl = url
+                    .replace(/&amp;/g, '&')
+                    .replace(/&lt;/g, '<')
+                    .replace(/&gt;/g, '>')
+                    .replace(/&quot;/g, '"')
+                    .replace(/&#x27;/g, "'");
+
+                if (isValidUrl(decodedUrl)) {
+                    // Re-encode for safe insertion
+                    const safeUrl = decodedUrl
+                        .replace(/"/g, '&quot;')
+                        .replace(/'/g, '&#x27;');
+                    return '<a href="' + safeUrl + '" target="_blank" rel="noopener noreferrer">' + text + '</a>';
+                }
+                return text; // Invalid URL, just return text
+            });
+
+            // Use DOMPurify to sanitize the final HTML
+            if (typeof DOMPurify !== 'undefined') {
+                return DOMPurify.sanitize(html, {
+                    ALLOWED_TAGS: ['strong', 'em', 'code', 'a', 'del', 'b', 'i'],
+                    ALLOWED_ATTR: ['href', 'target', 'rel']
+                });
+            }
+
             return html;
         }
 
@@ -1650,43 +1731,62 @@
         function createHexagon(name, status, link) {
             const container = document.createElement('div');
             container.className = 'hexagon-container';
-            
+
             const statusClass = `status-${status}`;
-            const hasLink = link && link.trim() !== '';
-            
-            container.innerHTML = `
-                <div class="hexagon ${hasLink ? 'clickable' : ''}" ${hasLink ? `onclick="window.open('${link}', '_blank')"` : ''}>
-                    <svg viewBox="0 0 100 115">
-                        <defs>
-                            <clipPath id="hexClip">
-                                <path d="M 50 8 L 92 31 L 92 77 L 50 100 L 8 77 L 8 31 Z" />
-                            </clipPath>
-                        </defs>
-                        <path class="${statusClass}" 
-                              d="M 50 3 
-                                 C 48 3, 46 4, 45 5.5
-                                 L 8 28.5
-                                 C 6 29.5, 5 31.5, 5 33.5
-                                 L 5 74.5
-                                 C 5 76.5, 6 78.5, 8 79.5
-                                 L 45 102.5
-                                 C 46 104, 48 105, 50 105
-                                 C 52 105, 54 104, 55 102.5
-                                 L 92 79.5
-                                 C 94 78.5, 95 76.5, 95 74.5
-                                 L 95 33.5
-                                 C 95 31.5, 94 29.5, 92 28.5
-                                 L 55 5.5
-                                 C 54 4, 52 3, 50 3 Z"
-                              stroke="none"/>
-                    </svg>
-                    <div class="hexagon-content">
-                        <div class="hexagon-label">${name}</div>
-                        <div class="hexagon-status">${status}</div>
-                    </div>
-                </div>
-            `;
-            
+            const hasLink = link && link.trim() !== '' && isValidUrl(link);
+
+            // Create hexagon div
+            const hexDiv = document.createElement('div');
+            hexDiv.className = hasLink ? 'hexagon clickable' : 'hexagon';
+
+            // Add click handler securely if link is valid
+            if (hasLink) {
+                hexDiv.onclick = function() {
+                    window.open(link, '_blank', 'noopener,noreferrer');
+                };
+            }
+
+            // Create SVG
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('viewBox', '0 0 100 115');
+
+            // Create defs
+            const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+            const clipPath = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
+            clipPath.setAttribute('id', 'hexClip');
+            const clipPathPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            clipPathPath.setAttribute('d', 'M 50 8 L 92 31 L 92 77 L 50 100 L 8 77 L 8 31 Z');
+            clipPath.appendChild(clipPathPath);
+            defs.appendChild(clipPath);
+            svg.appendChild(defs);
+
+            // Create path
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path.setAttribute('class', statusClass);
+            path.setAttribute('d', 'M 50 3 C 48 3, 46 4, 45 5.5 L 8 28.5 C 6 29.5, 5 31.5, 5 33.5 L 5 74.5 C 5 76.5, 6 78.5, 8 79.5 L 45 102.5 C 46 104, 48 105, 50 105 C 52 105, 54 104, 55 102.5 L 92 79.5 C 94 78.5, 95 76.5, 95 74.5 L 95 33.5 C 95 31.5, 94 29.5, 92 28.5 L 55 5.5 C 54 4, 52 3, 50 3 Z');
+            path.setAttribute('stroke', 'none');
+            svg.appendChild(path);
+
+            hexDiv.appendChild(svg);
+
+            // Create content div
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'hexagon-content';
+
+            const labelDiv = document.createElement('div');
+            labelDiv.className = 'hexagon-label';
+            labelDiv.textContent = name; // Safe - uses textContent
+
+            const statusDiv = document.createElement('div');
+            statusDiv.className = 'hexagon-status';
+            statusDiv.textContent = status; // Safe - uses textContent
+
+            contentDiv.appendChild(labelDiv);
+            contentDiv.appendChild(statusDiv);
+            hexDiv.appendChild(contentDiv);
+
+            container.appendChild(hexDiv);
+
             return container;
         }
 
@@ -1967,15 +2067,17 @@
         async function executeDQLProxy(query, timeframe, tileTitle) {
             const proxyUrl = config.proxyUrl || 'http://localhost:8081';
             const apiEndpoint = `${proxyUrl}/api`;
-            
+
             try {
-                const headers = { 
+                const headers = {
                     'Content-Type': 'application/json'
                 };
-                
-                // Aggiungi API key se configurata
+
+                // Aggiungi API key (obbligatoria per Python proxy)
                 if (config.proxyApiKey && typeof config.proxyApiKey === 'string' && config.proxyApiKey.trim() !== '') {
-                    headers['X-Proxy-API-Key'] = config.proxyApiKey.trim();
+                    headers['X-API-Key'] = config.proxyApiKey.trim();
+                } else {
+                    throw new Error('Python Proxy API key is required. Configure it in settings.');
                 }
                 
                 const response = await fetch(apiEndpoint, {
@@ -2089,14 +2191,7 @@
             document.getElementById('tableTitle').textContent = customTableTitle;
             
             // Imposta il titolo dashboard
-            const h1Element = document.querySelector('.header h1');
-            const statusIndicator = h1Element.querySelector('.status-indicator');
-            h1Element.innerHTML = `
-                <img src="https://companieslogo.com/img/orig/DT-89e31c0c.png?t=1720244491" 
-                     alt="Dynatrace" style="width: 32px; height: 32px; vertical-align: middle; margin-right: 10px;">
-                ${dashboardTitle}
-            `;
-            h1Element.appendChild(statusIndicator);
+            setDashboardTitle(dashboardTitle);
             
             // Renderizza i tile
             renderTiles();

@@ -2,6 +2,11 @@
 """
 Proxy server per bypassare CORS con Dynatrace API
 Avvia con: python3 proxy_server.py
+
+Security features:
+- API key authentication (set via PROXY_API_KEY env variable)
+- CORS restrictions
+- URL validation
 """
 
 from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -10,8 +15,45 @@ import urllib.request
 import urllib.error
 from urllib.parse import urlparse
 import os
+import secrets
+import hashlib
+
+# Generate or load API key
+# Priority: Environment variable > Generated key
+API_KEY = os.environ.get('PROXY_API_KEY')
+if not API_KEY:
+    # Generate a secure random API key
+    API_KEY = secrets.token_urlsafe(32)
+    print(f"\n⚠️  No PROXY_API_KEY environment variable found.")
+    print(f"📝 Generated new API key: {API_KEY}")
+    print(f"💡 To use a persistent key, set environment variable:")
+    print(f"   export PROXY_API_KEY='{API_KEY}'")
+    print()
+
+# Allowed origins for CORS (more restrictive than *)
+ALLOWED_ORIGINS = [
+    'http://localhost:8081',
+    'http://127.0.0.1:8081',
+    'http://localhost:3000',  # For development
+    'http://127.0.0.1:3000',
+]
 
 class CORSProxyHandler(BaseHTTPRequestHandler):
+    def verify_api_key(self):
+        """Verify X-API-Key header using constant-time comparison"""
+        provided_key = self.headers.get('X-API-Key', '')
+
+        # Use constant-time comparison to prevent timing attacks
+        return secrets.compare_digest(provided_key, API_KEY)
+
+    def get_allowed_origin(self):
+        """Get the origin if it's in the allowed list"""
+        origin = self.headers.get('Origin', '')
+        if origin in ALLOWED_ORIGINS:
+            return origin
+        # Default to first allowed origin if not found
+        return ALLOWED_ORIGINS[0]
+
     def do_GET(self):
         """Gestisce richieste GET per health check e dashboard"""
         if self.path == '/health':
@@ -59,7 +101,19 @@ class CORSProxyHandler(BaseHTTPRequestHandler):
         if self.path != '/api':
             self.send_error(404, "Usa /api per le richieste proxy")
             return
-            
+
+        # Verify API key authentication
+        if not self.verify_api_key():
+            self.send_response(401)
+            self.send_cors_headers()
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({
+                'error': 'Unauthorized',
+                'message': 'Valid X-API-Key header required'
+            }).encode('utf-8'))
+            return
+
         try:
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length)
@@ -212,9 +266,12 @@ class CORSProxyHandler(BaseHTTPRequestHandler):
             }).encode('utf-8'))
 
     def send_cors_headers(self):
-        self.send_header('Access-Control-Allow-Origin', '*')
+        # Use allowed origin instead of wildcard
+        allowed_origin = self.get_allowed_origin()
+        self.send_header('Access-Control-Allow-Origin', allowed_origin)
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-API-Key')
+        self.send_header('Access-Control-Allow-Credentials', 'true')
 
     def log_message(self, format, *args):
         # Log personalizzato - viene chiamato automaticamente dopo ogni risposta
@@ -232,6 +289,13 @@ def run_proxy(port=8081):
 🚀 Server in ascolto su: http://localhost:{port}
 📊 Apri il browser su: http://localhost:{port}/
 🔌 API Proxy endpoint: http://localhost:{port}/api
+
+🔐 SECURITY ENABLED:
+   API Key: {API_KEY}
+
+   Configure this API key in dashboard settings!
+   For persistent key: export PROXY_API_KEY='your-key-here'
+
 ⏹️  Premi Ctrl+C per fermare il server
 
 """)
