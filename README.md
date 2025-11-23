@@ -2,17 +2,27 @@
 
 A lightweight, customizable dashboard for visualizing Dynatrace data through DQL queries. Features a fixed layout with 6 hexagonal tiles and 1 data table.
 
-![](dashboard-sshot01.png)
+![](assets/dashboard-sshot01.png)
 
 The dashboard can run locally or on a public webserver using either a Python or PHP proxy. All settings are stored in the browser's localStorage and can be exported/imported.
 
-## Files
+## Repository Structure
 
-| File | Description |
-|------|-------------|
-| `dashboard.html` | Main dashboard application |
-| `proxy_server.py` | Python proxy for local use |
-| `proxy.php` | PHP proxy for webserver deployment |
+```
+singleuse-dashboard/
+├── README.md                    # This file
+├── LICENSE                      # MIT License
+├── src/                         # Source code
+│   ├── dashboard.html          # Main dashboard application
+│   ├── proxy_server.py         # Python proxy for local use
+│   └── proxy.php               # PHP proxy for webserver deployment
+├── docs/                        # Documentation
+│   ├── SECURITY_REPORT.md      # Complete security audit
+│   ├── SECURITY_FIXES_SUMMARY.md  # Implementation details
+│   └── ENCRYPTION_DETAILS.md   # Encryption specifications
+└── assets/                      # Media files
+    └── dashboard-sshot01.png   # Dashboard screenshot
+```
 
 ## Quick Start
 
@@ -20,14 +30,12 @@ The dashboard can run locally or on a public webserver using either a Python or 
 
 **Requirements:** Python 3
 
-1. Place `dashboard.html` and `proxy_server.py` in the same folder
-
-2. Start the proxy server:
+1. Start the proxy server from the project root:
    ```bash
-   python3 proxy_server.py
+   python3 src/proxy_server.py
    ```
 
-3. **IMPORTANT:** The server will display a generated **API Key** in the console - **COPY IT NOW!**
+2. **IMPORTANT:** The server will display a generated **API Key** in the console - **COPY IT NOW!**
    ```
    🔑 Generated new API key - COPY THIS NOW:
 
@@ -37,23 +45,23 @@ The dashboard can run locally or on a public webserver using either a Python or 
    ```
    The API key is shown **only once** for security reasons.
 
-4. Open `http://localhost:8081` in your browser
+3. Open `http://localhost:8081` in your browser
 
-5. Click **⚙️ Config** and enter:
+4. Click **⚙️ Config** and enter:
    - **Proxy Mode:** Python Proxy
    - **Python Proxy URL:** `http://localhost:8081`
-   - **Python Proxy API Key:** Paste the API key from step 3
+   - **Python Proxy API Key:** Paste the API key from step 2
    - **Tenant URL:** `https://xxx.apps.dynatrace.com` (or your managed URL)
    - **API Token:** Your Dynatrace API token
 
-6. Click **Save**
+5. Click **Save**
 
 **Using a Persistent API Key (Optional):**
 
 To avoid generating a new key each time, set an environment variable:
 ```bash
 export PROXY_API_KEY='your-secure-key-here'
-python3 proxy_server.py
+python3 src/proxy_server.py
 ```
 
 The proxy will use this key instead of generating a new one.
@@ -62,12 +70,12 @@ The proxy will use this key instead of generating a new one.
 
 **Requirements:** PHP-enabled webserver
 
-1. Configure `proxy.php` by editing the API key:
+1. Configure `src/proxy.php` by editing the API key:
    ```php
    define('PROXY_API_KEY', 'YOUR_SECRET_KEY');
    ```
 
-2. Upload files to your webserver:
+2. Upload files from the `src/` folder to your webserver:
    ```
    /public_html/
      ├── dashboard.html
@@ -103,9 +111,9 @@ This dashboard includes comprehensive security enhancements:
 **Security Status:** 8/9 vulnerabilities fixed (89% - only 2 low-priority issues remain)
 
 For detailed security documentation, see:
-- [SECURITY_REPORT.md](SECURITY_REPORT.md) - Complete audit findings and fixes
-- [SECURITY_FIXES_SUMMARY.md](SECURITY_FIXES_SUMMARY.md) - Implementation details
-- [ENCRYPTION_DETAILS.md](ENCRYPTION_DETAILS.md) - Encryption technical specs
+- [SECURITY_REPORT.md](docs/SECURITY_REPORT.md) - Complete audit findings and fixes
+- [SECURITY_FIXES_SUMMARY.md](docs/SECURITY_FIXES_SUMMARY.md) - Implementation details
+- [ENCRYPTION_DETAILS.md](docs/ENCRYPTION_DETAILS.md) - Encryption technical specs
 
 ## Dashboard Configuration
 
@@ -200,7 +208,7 @@ Assign scopes based on your query requirements:
 6. **CORS Restrictions:**
    - Whitelist-based origin validation (localhost only by default)
    - No wildcard origins allowed
-   - Modify `ALLOWED_ORIGINS` in `proxy_server.py` if needed
+   - Modify `ALLOWED_ORIGINS` in `src/proxy_server.py` if needed
 
 ### ⚠️ Deployment Considerations
 
@@ -228,9 +236,9 @@ Assign scopes based on your query requirements:
 - Only 2 low-priority issues remain (Path Traversal with hardcoded paths, Rate Limiting)
 
 For comprehensive security documentation:
-- [SECURITY_REPORT.md](SECURITY_REPORT.md) - Complete audit report with fix status
-- [SECURITY_FIXES_SUMMARY.md](SECURITY_FIXES_SUMMARY.md) - Detailed implementation guide
-- [ENCRYPTION_DETAILS.md](ENCRYPTION_DETAILS.md) - Technical encryption specifications
+- [SECURITY_REPORT.md](docs/SECURITY_REPORT.md) - Complete audit report with fix status
+- [SECURITY_FIXES_SUMMARY.md](docs/SECURITY_FIXES_SUMMARY.md) - Detailed implementation guide
+- [ENCRYPTION_DETAILS.md](docs/ENCRYPTION_DETAILS.md) - Technical encryption specifications
 
 ## Requirements
 
