@@ -14,28 +14,6 @@ The dashboard can run locally or on a public webserver using either a Python or 
 | `proxy_server.py` | Python proxy for local use |
 | `proxy.php` | PHP proxy for webserver deployment |
 
-## Security Features
-
-This dashboard includes comprehensive security enhancements:
-
-- ✅ **Encrypted Storage:** API tokens and keys encrypted using AES-256-GCM with PBKDF2 (100k iterations)
-- ✅ **Automatic Migration:** Legacy plaintext configs automatically upgraded with user notification
-- ✅ **XSS Protection:** Multi-layered defense with DOMPurify sanitization, HTML encoding, and safe DOM APIs
-- ✅ **API Key Authentication:** Proxy server requires X-API-Key header (constant-time verification)
-- ✅ **SSRF Protection:** URL validation blocks private IPs, localhost, and non-Dynatrace domains
-- ✅ **CORS Restrictions:** Whitelist-based origin validation (localhost only by default)
-- ✅ **Secure Logging:** Tokens never exposed in logs (SHA256 hash for identification only)
-- ✅ **Generic Error Messages:** No internal system details disclosed to clients
-- ✅ **URL Validation:** Safe rendering with full URL validation and noopener/noreferrer
-- ✅ **Safe Rendering:** Uses textContent and DOM APIs instead of innerHTML
-
-**Security Status:** 8/9 vulnerabilities fixed (89% - only 2 low-priority issues remain)
-
-For detailed security documentation, see:
-- [SECURITY_REPORT.md](SECURITY_REPORT.md) - Complete audit findings and fixes
-- [SECURITY_FIXES_SUMMARY.md](SECURITY_FIXES_SUMMARY.md) - Implementation details
-- [ENCRYPTION_DETAILS.md](ENCRYPTION_DETAILS.md) - Encryption technical specs
-
 ## Quick Start
 
 ### Option A: Local Setup (Python Proxy)
@@ -106,6 +84,28 @@ The proxy will use this key instead of generating a new one.
    - **API Token:** Your Dynatrace token
 
 5. Click **Save**
+
+## Security Features
+
+This dashboard includes comprehensive security enhancements:
+
+- ✅ **Encrypted Storage:** API tokens and keys encrypted using AES-256-GCM with PBKDF2 (100k iterations)
+- ✅ **Automatic Migration:** Legacy plaintext configs automatically upgraded with user notification
+- ✅ **XSS Protection:** Multi-layered defense with DOMPurify sanitization, HTML encoding, and safe DOM APIs
+- ✅ **API Key Authentication:** Proxy server requires X-API-Key header (constant-time verification)
+- ✅ **SSRF Protection:** URL validation blocks private IPs, localhost, and non-Dynatrace domains
+- ✅ **CORS Restrictions:** Whitelist-based origin validation (localhost only by default)
+- ✅ **Secure Logging:** Tokens never exposed in logs (SHA256 hash for identification only)
+- ✅ **Generic Error Messages:** No internal system details disclosed to clients
+- ✅ **URL Validation:** Safe rendering with full URL validation and noopener/noreferrer
+- ✅ **Safe Rendering:** Uses textContent and DOM APIs instead of innerHTML
+
+**Security Status:** 8/9 vulnerabilities fixed (89% - only 2 low-priority issues remain)
+
+For detailed security documentation, see:
+- [SECURITY_REPORT.md](SECURITY_REPORT.md) - Complete audit findings and fixes
+- [SECURITY_FIXES_SUMMARY.md](SECURITY_FIXES_SUMMARY.md) - Implementation details
+- [ENCRYPTION_DETAILS.md](ENCRYPTION_DETAILS.md) - Encryption technical specs
 
 ## Dashboard Configuration
 
