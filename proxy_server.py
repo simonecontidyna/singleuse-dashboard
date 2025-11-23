@@ -24,10 +24,11 @@ API_KEY = os.environ.get('PROXY_API_KEY')
 if not API_KEY:
     # Generate a secure random API key
     API_KEY = secrets.token_urlsafe(32)
+    # Hash for display purposes only (first 8 chars)
+    key_hash = hashlib.sha256(API_KEY.encode()).hexdigest()[:8]
     print(f"\n⚠️  No PROXY_API_KEY environment variable found.")
-    print(f"📝 Generated new API key: {API_KEY}")
-    print(f"💡 To use a persistent key, set environment variable:")
-    print(f"   export PROXY_API_KEY='{API_KEY}'")
+    print(f"📝 Generated new API key (hash: {key_hash}...)")
+    print(f"💡 Check the dashboard for the full key or set via environment variable")
     print()
 
 # Allowed origins for CORS (more restrictive than *)
@@ -37,6 +38,62 @@ ALLOWED_ORIGINS = [
     'http://localhost:3000',  # For development
     'http://127.0.0.1:3000',
 ]
+
+def is_valid_dynatrace_url(url):
+    """
+    Validate that the URL is a legitimate Dynatrace tenant URL.
+    Prevents SSRF attacks by blocking private IPs and non-Dynatrace domains.
+    """
+    try:
+        parsed = urlparse(url)
+
+        # Must be HTTP or HTTPS
+        if parsed.scheme not in ['http', 'https']:
+            return False
+
+        # Extract hostname
+        hostname = parsed.hostname
+        if not hostname:
+            return False
+
+        # Block localhost and loopback
+        if hostname in ['localhost', '127.0.0.1', '::1', '0.0.0.0']:
+            return False
+
+        # Block private IP ranges
+        import ipaddress
+        try:
+            ip = ipaddress.ip_address(hostname)
+            if ip.is_private or ip.is_loopback or ip.is_link_local:
+                return False
+            # Block cloud metadata services
+            if hostname == '169.254.169.254':
+                return False
+        except ValueError:
+            # Not an IP address, check domain
+            pass
+
+        # Validate Dynatrace domains
+        valid_domains = [
+            '.dynatrace.com',
+            '.dynatracelabs.com',
+            '.sprint.dynatracelabs.com',
+            '.dynatrace.managed',
+            '.dynatrace-managed.com',
+        ]
+
+        # Check if hostname ends with valid Dynatrace domain
+        is_dynatrace_domain = any(hostname.endswith(domain) for domain in valid_domains)
+
+        # Also allow exact match for managed instances (e.g., "abc123.managed-xxx.dynalabs.io")
+        is_managed_instance = '.managed' in hostname and any(
+            tld in hostname for tld in ['.dynatrace.com', '.dynalabs.io', '.dynatracelabs.com']
+        )
+
+        return is_dynatrace_domain or is_managed_instance
+
+    except Exception:
+        return False
 
 class CORSProxyHandler(BaseHTTPRequestHandler):
     def verify_api_key(self):
@@ -87,9 +144,9 @@ class CORSProxyHandler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(content.encode('utf-8'))
             except FileNotFoundError:
-                self.send_error(404, "dashboard.html non trovato. Assicurati che sia nella stessa directory del proxy.")
+                self.send_error(404, "Resource not found")
         else:
-            self.send_error(404, "File non trovato")
+            self.send_error(404, "Resource not found")
     
     def do_OPTIONS(self):
         self.send_response(200)
@@ -99,7 +156,7 @@ class CORSProxyHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         # Solo /api gestisce le richieste proxy
         if self.path != '/api':
-            self.send_error(404, "Usa /api per le richieste proxy")
+            self.send_error(404, "Resource not found")
             return
 
         # Verify API key authentication
@@ -127,9 +184,28 @@ class CORSProxyHandler(BaseHTTPRequestHandler):
             tile_title = request_data.get('tileTitle', 'Unknown')
             
             if not all([dynatrace_url, api_token, query]):
-                self.send_error(400, "Missing required parameters")
+                self.send_response(400)
+                self.send_cors_headers()
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({
+                    'error': 'Bad Request',
+                    'message': 'Invalid request format'
+                }).encode('utf-8'))
                 return
-            
+
+            # Validate Dynatrace URL to prevent SSRF attacks
+            if not is_valid_dynatrace_url(dynatrace_url):
+                self.send_response(400)
+                self.send_cors_headers()
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({
+                    'error': 'Bad Request',
+                    'message': 'Invalid tenant URL'
+                }).encode('utf-8'))
+                return
+
             # Pulisci l'URL rimuovendo trailing slashes e doppi slash
             dynatrace_url = dynatrace_url.rstrip('/')
             
@@ -160,13 +236,15 @@ class CORSProxyHandler(BaseHTTPRequestHandler):
             
             # 🔍 LOG REQUEST (solo se abilitato)
             if enable_logging:
+                # Hash token for security
+                token_hash = hashlib.sha256(api_token.encode()).hexdigest()[:8]
                 print("\n" + "="*80)
                 print("📤 REQUEST to Dynatrace:")
                 print("="*80)
                 print(f"URL: {api_url}")
                 print(f"Method: POST")
                 print(f"Headers:")
-                print(f"  Authorization: Bearer {api_token[:20]}...{api_token[-10:]}")
+                print(f"  Authorization: Bearer [REDACTED-{token_hash}]")
                 print(f"  Content-Type: application/json")
                 print(f"\nRequest Body:")
                 print(json.dumps(request_body, indent=2))
@@ -220,7 +298,7 @@ class CORSProxyHandler(BaseHTTPRequestHandler):
                 
         except urllib.error.HTTPError as e:
             error_body = e.read().decode('utf-8') if e.fp else str(e)
-            
+
             # 🔍 LOG ERROR (solo se abilitato)
             if enable_logging:
                 print("\n" + "="*80)
@@ -231,14 +309,15 @@ class CORSProxyHandler(BaseHTTPRequestHandler):
                 print(f"Error Body:")
                 print(error_body)
                 print("="*80 + "\n")
-            
-            self.send_response(e.code)
+
+            # Return generic error to client (don't expose backend details)
+            self.send_response(502)
             self.send_cors_headers()
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
             self.wfile.write(json.dumps({
-                'error': f'Dynatrace API error: {e.code}',
-                'message': error_body
+                'error': 'Service Error',
+                'message': 'Unable to process request'
             }).encode('utf-8'))
             
         except Exception as e:
@@ -255,14 +334,15 @@ class CORSProxyHandler(BaseHTTPRequestHandler):
                     print("="*80 + "\n")
             except:
                 pass  # enable_logging potrebbe non essere definita in caso di errore early
-            
+
+            # Return generic error to client (don't expose internal details)
             self.send_response(500)
             self.send_cors_headers()
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
             self.wfile.write(json.dumps({
-                'error': 'Proxy error',
-                'message': str(e)
+                'error': 'Internal Server Error',
+                'message': 'An unexpected error occurred'
             }).encode('utf-8'))
 
     def send_cors_headers(self):
@@ -281,6 +361,8 @@ class CORSProxyHandler(BaseHTTPRequestHandler):
 def run_proxy(port=8081):
     server_address = ('', port)
     httpd = HTTPServer(server_address, CORSProxyHandler)
+    # Display only hash for security
+    key_hash = hashlib.sha256(API_KEY.encode()).hexdigest()[:8]
     print(f"""
 ╔══════════════════════════════════════════════════════════════╗
 ║           Dynatrace CORS Proxy Server Avviato                ║
@@ -291,10 +373,10 @@ def run_proxy(port=8081):
 🔌 API Proxy endpoint: http://localhost:{port}/api
 
 🔐 SECURITY ENABLED:
-   API Key: {API_KEY}
+   API Key Hash: {key_hash}...
 
-   Configure this API key in dashboard settings!
-   For persistent key: export PROXY_API_KEY='your-key-here'
+   ⚠️  The full API key will be displayed in the dashboard UI
+   For persistent key: set PROXY_API_KEY environment variable
 
 ⏹️  Premi Ctrl+C per fermare il server
 

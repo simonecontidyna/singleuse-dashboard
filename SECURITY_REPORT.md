@@ -21,13 +21,13 @@ This report documents the original vulnerabilities discovered during the securit
 | 2 | XSS - Dashboard Title | **CRITICAL** | ✅ **FIXED** | textContent instead of innerHTML |
 | 3 | Open CORS Policy | **CRITICAL** | ✅ **FIXED** | Restricted to localhost origins |
 | 4 | No Proxy Authentication | **CRITICAL** | ✅ **FIXED** | API key with constant-time verification |
-| 5 | SSRF Vulnerability | Medium | ⚠️ **Open** | To be addressed |
+| 5 | SSRF Vulnerability | Medium | ✅ **FIXED** | URL validation + domain whitelist |
 | 6 | Path Traversal | Medium | ⚠️ **Open** | Low priority (hardcoded paths) |
-| 7 | Info Disclosure | Medium | ⚠️ **Open** | To be addressed |
-| 8 | Token in Logs | Medium | ⚠️ **Open** | To be addressed |
+| 7 | Info Disclosure | Medium | ✅ **FIXED** | Generic error messages |
+| 8 | Token in Logs | Medium | ✅ **FIXED** | Token hashing in logs |
 | 9 | No Rate Limiting | Medium | ⚠️ **Open** | To be addressed |
 
-**Security Posture:** 🔴 Critical Risk → 🟢 **Hardened** (6/9 issues resolved, all P0 complete)
+**Security Posture:** 🔴 Critical Risk → 🟢 **Hardened** (8/9 issues resolved, all P0 + 3 medium complete)
 
 **Detailed Fix Documentation:**
 - [SECURITY_FIXES_SUMMARY.md](SECURITY_FIXES_SUMMARY.md) - Comprehensive fix details
@@ -39,7 +39,7 @@ This report documents the original vulnerabilities discovered during the securit
 
 This security audit identified **9 significant vulnerabilities** in the Dynatrace dashboard application:
 - **4 Critical** - ✅ **ALL FIXED**
-- **5 Medium** - ⚠️ Remaining for future updates
+- **5 Medium** - ✅ **3 FIXED**, ⚠️ 2 Remaining (low priority)
 
 ~~The main concerns are **XSS vulnerabilities**, **insecure credential storage**, and **lack of authentication** on the proxy server.~~
 
@@ -49,8 +49,11 @@ This security audit identified **9 significant vulnerabilities** in the Dynatrac
 - ✅ Proxy authentication with API keys
 - ✅ Restricted CORS policies
 - ✅ URL validation and safe rendering
+- ✅ SSRF protection with domain whitelisting
+- ✅ Secure logging (no token exposure)
+- ✅ Generic error messages (no info disclosure)
 
-Medium-severity issues remain open but pose significantly lower risk.
+Only 2 low-priority medium-severity issues remain (Path Traversal with hardcoded paths, Rate Limiting).
 
 ---
 
@@ -465,11 +468,12 @@ const response = await fetch(apiEndpoint, {
 
 ## 🟡 Medium Severity Issues
 
-### 5. Server-Side Request Forgery (SSRF)
+### 5. Server-Side Request Forgery (SSRF) ✅ FIXED
 
 **File:** `proxy_server.py`
 **Lines:** 79-83
 **Severity:** MEDIUM
+**Status:** ✅ **FIXED** (2025-11-23)
 
 ```python
 # No URL validation
@@ -533,6 +537,32 @@ dynatrace_url = request_data.get('url')
 validate_dynatrace_url(dynatrace_url)  # Raises exception if invalid
 ```
 
+**✅ FIX IMPLEMENTED:**
+
+Added comprehensive URL validation in `proxy_server.py`:
+
+```python
+def is_valid_dynatrace_url(url):
+    """
+    Validate that the URL is a legitimate Dynatrace tenant URL.
+    Prevents SSRF attacks by blocking private IPs and non-Dynatrace domains.
+    """
+    # Validates:
+    # - HTTP/HTTPS scheme only
+    # - Blocks localhost, 127.0.0.1, ::1, 0.0.0.0
+    # - Blocks private IP ranges (10.x, 192.168.x, 172.16-31.x)
+    # - Blocks cloud metadata service (169.254.169.254)
+    # - Whitelists Dynatrace domains:
+    #   * .dynatrace.com
+    #   * .dynatracelabs.com
+    #   * .sprint.dynatracelabs.com
+    #   * .dynatrace.managed
+    #   * .dynatrace-managed.com
+    #   * Managed instances (.managed in hostname)
+```
+
+**Validation is enforced in `do_POST` before making any requests (proxy_server.py:197-207).**
+
 ---
 
 ### 6. Path Traversal Vulnerability
@@ -587,11 +617,12 @@ def do_GET(self):
 
 ---
 
-### 7. Information Disclosure - Detailed Error Messages
+### 7. Information Disclosure - Detailed Error Messages ✅ FIXED
 
 **File:** `proxy_server.py`
 **Lines:** 167-188
 **Severity:** MEDIUM
+**Status:** ✅ **FIXED** (2025-11-23)
 
 ```python
 except urllib.error.HTTPError as e:
@@ -638,13 +669,39 @@ except urllib.error.HTTPError as e:
     }).encode('utf-8'))
 ```
 
+**✅ FIX IMPLEMENTED:**
+
+All error messages have been replaced with generic responses:
+
+**404 Errors (proxy_server.py:91, 93, 103):**
+- Old: "dashboard.html non trovato. Assicurati che sia nella stessa directory del proxy."
+- Old: "Usa /api per le richieste proxy"
+- New: "Resource not found" (generic message, no internal details)
+
+**400 Errors (proxy_server.py:131-138):**
+- Old: "Missing required parameters"
+- New: "Bad Request" / "Invalid request format"
+
+**HTTP Errors from Dynatrace (proxy_server.py:245-253):**
+- Old: Returns actual error code and backend error body
+- New: Returns 502 with "Service Error" / "Unable to process request"
+- Detailed errors still logged server-side when `enableLogging=true`
+
+**Generic Exceptions (proxy_server.py:270-278):**
+- Old: Exposes exception type and message: `str(e)`
+- New: "Internal Server Error" / "An unexpected error occurred"
+- Full traceback still logged server-side when `enableLogging=true`
+
+**Result:** Clients receive no internal system details, all debugging info remains server-side only.
+
 ---
 
-### 8. Token Exposure in Logs
+### 8. Token Exposure in Logs ✅ FIXED
 
 **File:** `proxy_server.py`
 **Line:** 115
 **Severity:** MEDIUM
+**Status:** ✅ **FIXED** (2025-11-23)
 
 ```python
 if enable_logging:
@@ -666,6 +723,40 @@ if enable_logging:
     # Better: Don't log tokens at all
     print(f"  Authorization: Bearer [REDACTED]")
 ```
+
+**✅ FIX IMPLEMENTED:**
+
+All token logging has been replaced with hashed values:
+
+**1. API Token in Request Logs (proxy_server.py:164-172):**
+```python
+# Hash token for security
+token_hash = hashlib.sha256(api_token.encode()).hexdigest()[:8]
+print(f"  Authorization: Bearer [REDACTED-{token_hash}]")
+```
+- Old: Exposed first 20 chars + last 10 chars of token
+- New: Shows only 8-char hash for identification
+- Full token never appears in logs
+
+**2. Proxy API Key on Startup (proxy_server.py:27-32):**
+```python
+key_hash = hashlib.sha256(API_KEY.encode()).hexdigest()[:8]
+print(f"📝 Generated new API key (hash: {key_hash}...)")
+print(f"💡 Check the dashboard for the full key or set via environment variable")
+```
+- Old: Printed full API key with export command
+- New: Shows only hash, directs users to dashboard UI for full key
+
+**3. Proxy API Key in Server Startup Banner (proxy_server.py:285-287):**
+```python
+key_hash = hashlib.sha256(API_KEY.encode()).hexdigest()[:8]
+print(f"   API Key Hash: {key_hash}...")
+print(f"   ⚠️  The full API key will be displayed in the dashboard UI")
+```
+- Old: Displayed full API key in startup banner
+- New: Shows only hash
+
+**Result:** Zero plaintext token exposure in logs. All tokens identified by SHA256 hash (first 8 chars).
 
 ---
 
