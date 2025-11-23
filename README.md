@@ -16,14 +16,25 @@ The dashboard can run locally or on a public webserver using either a Python or 
 
 ## Security Features
 
-This dashboard includes multiple security enhancements:
+This dashboard includes comprehensive security enhancements:
 
-- ✅ **Encrypted Storage:** API tokens and keys encrypted using AES-256-GCM before localStorage
-- ✅ **XSS Protection:** DOMPurify sanitization for all user inputs
-- ✅ **API Key Authentication:** Proxy server requires authentication
-- ✅ **CORS Restrictions:** Limited to localhost origins
-- ✅ **URL Validation:** Only HTTPS links are allowed
-- ✅ **Secure Rendering:** Uses textContent instead of innerHTML for user data
+- ✅ **Encrypted Storage:** API tokens and keys encrypted using AES-256-GCM with PBKDF2 (100k iterations)
+- ✅ **Automatic Migration:** Legacy plaintext configs automatically upgraded with user notification
+- ✅ **XSS Protection:** Multi-layered defense with DOMPurify sanitization, HTML encoding, and safe DOM APIs
+- ✅ **API Key Authentication:** Proxy server requires X-API-Key header (constant-time verification)
+- ✅ **SSRF Protection:** URL validation blocks private IPs, localhost, and non-Dynatrace domains
+- ✅ **CORS Restrictions:** Whitelist-based origin validation (localhost only by default)
+- ✅ **Secure Logging:** Tokens never exposed in logs (SHA256 hash for identification only)
+- ✅ **Generic Error Messages:** No internal system details disclosed to clients
+- ✅ **URL Validation:** Safe rendering with full URL validation and noopener/noreferrer
+- ✅ **Safe Rendering:** Uses textContent and DOM APIs instead of innerHTML
+
+**Security Status:** 8/9 vulnerabilities fixed (89% - only 2 low-priority issues remain)
+
+For detailed security documentation, see:
+- [SECURITY_REPORT.md](SECURITY_REPORT.md) - Complete audit findings and fixes
+- [SECURITY_FIXES_SUMMARY.md](SECURITY_FIXES_SUMMARY.md) - Implementation details
+- [ENCRYPTION_DETAILS.md](ENCRYPTION_DETAILS.md) - Encryption technical specs
 
 ## Quick Start
 
@@ -32,26 +43,42 @@ This dashboard includes multiple security enhancements:
 **Requirements:** Python 3
 
 1. Place `dashboard.html` and `proxy_server.py` in the same folder
+
 2. Start the proxy server:
    ```bash
    python3 proxy_server.py
    ```
-   The server will display an **API Key** - copy this key!
 
-3. Open `http://localhost:8081` in your browser
-4. Click **Config** and enter:
+3. **IMPORTANT:** The server will display a generated **API Key** in the console - **COPY IT NOW!**
+   ```
+   🔑 Generated new API key - COPY THIS NOW:
+
+      [YOUR-API-KEY-HERE]
+
+   📋 Configure this key in the dashboard 'Python Proxy API Key' field
+   ```
+   The API key is shown **only once** for security reasons.
+
+4. Open `http://localhost:8081` in your browser
+
+5. Click **⚙️ Config** and enter:
    - **Proxy Mode:** Python Proxy
    - **Python Proxy URL:** `http://localhost:8081`
-   - **Python Proxy API Key:** Paste the API key from step 2
-   - **Tenant URL:** `https://xxx.apps.dynatrace.com`
-   - **API Token:** Your Dynatrace token
-5. Click **Save**
+   - **Python Proxy API Key:** Paste the API key from step 3
+   - **Tenant URL:** `https://xxx.apps.dynatrace.com` (or your managed URL)
+   - **API Token:** Your Dynatrace API token
 
-**Note:** To use a persistent API key across restarts:
+6. Click **Save**
+
+**Using a Persistent API Key (Optional):**
+
+To avoid generating a new key each time, set an environment variable:
 ```bash
 export PROXY_API_KEY='your-secure-key-here'
 python3 proxy_server.py
 ```
+
+The proxy will use this key instead of generating a new one.
 
 ### Option B: Webserver Setup (PHP Proxy)
 
@@ -114,38 +141,96 @@ Assign scopes based on your query requirements:
 
 | Issue | Solution |
 |-------|----------|
-| Red status indicator | Verify the proxy is running |
-| 401 Unauthorized | **Check Python Proxy API Key** - Copy from proxy console and paste in dashboard config |
-| 401 Error (Dynatrace) | Check Dynatrace API Token is valid |
-| 403 Error | Verify Dynatrace token permissions include required scopes |
-| CORS Error | Ensure you're using a proxy, not direct connection |
-| Empty data | Validate your DQL query in the Dynatrace console |
-| "API key is required" | Configure the Python Proxy API Key in dashboard settings |
+| Red status indicator | Verify the proxy is running on the correct port |
+| 401 Unauthorized (Proxy) | **Check Python Proxy API Key** - Restart proxy to see key in console, then copy to dashboard config |
+| 401 Unauthorized (Dynatrace) | Check Dynatrace API Token is valid and not expired |
+| 403 Forbidden | Verify Dynatrace token permissions include required scopes (storage:*:read) |
+| 400 Bad Request - "Invalid tenant URL" | **SSRF Protection:** Only Dynatrace domains allowed (*.dynatrace.com, *.dynatracelabs.com). Check Tenant URL format |
+| CORS Error | Ensure you're using a proxy, not direct connection to Dynatrace |
+| Empty data | Validate your DQL query in the Dynatrace console first |
+| "API key is required" | Configure the Python Proxy API Key in dashboard settings (⚙️ Config) |
+| Lost API Key | Restart the proxy server - it will generate and display a new key |
+| 502 Service Error | Check proxy logs for details (enable logging in dashboard settings) |
+| Security upgrade notification | Normal - your old plaintext credentials were automatically encrypted |
 
 ## Notes
 
 - Auto-refresh interval is configurable from 30 seconds to 60 minutes
 - PHP proxy includes rate limiting (30 requests/minute per IP)
-- All settings persist in browser localStorage
-- Python proxy now requires API key authentication for security
+- All settings persist in browser localStorage (encrypted with AES-256-GCM)
+- Python proxy requires API key authentication for security
+- Legacy configs are automatically migrated to encrypted format
+- Tokens are never exposed in logs (SHA256 hash shown for identification)
 
 ## Security Considerations
 
 ⚠️ **Important Security Notes:**
 
-1. **Encrypted Storage:** API tokens and proxy keys are encrypted using AES-256-GCM with PBKDF2 key derivation before being stored in localStorage. This protects against casual inspection and makes token theft more difficult, though determined attackers with browser access could potentially decrypt the data.
+### ✅ Implemented Protections
 
-2. **Python Proxy:** The proxy generates a random API key on startup. Set `PROXY_API_KEY` environment variable for persistent keys.
+1. **Encrypted Storage (AES-256-GCM):**
+   - All API tokens and proxy keys encrypted using AES-256-GCM with PBKDF2 (100,000 iterations)
+   - Random salt per browser instance, random IV per encryption operation
+   - Automatic migration of legacy plaintext configurations
+   - Note: Determined attackers with browser access could potentially decrypt data
 
-3. **Network Exposure:** Do not expose the Python proxy to the public internet without additional security measures (HTTPS, firewall rules, etc.).
+2. **XSS Protection (Multi-Layered):**
+   - DOMPurify sanitization for all user inputs
+   - HTML encoding before markdown processing
+   - Safe DOM APIs (createElement, textContent) instead of innerHTML
+   - URL validation with full scheme checking
+   - Links opened with noopener/noreferrer flags
 
-4. **XSS Protection:** The dashboard uses DOMPurify to sanitize all user inputs, but avoid pasting untrusted DQL queries.
+3. **SSRF Protection:**
+   - URL validation blocks private IPs (10.x, 192.168.x, 172.16-31.x)
+   - Localhost and loopback addresses blocked (127.0.0.1, ::1)
+   - Cloud metadata service blocked (169.254.169.254)
+   - Whitelist approach: Only Dynatrace domains allowed (*.dynatrace.com, etc.)
 
-5. **CORS:** The Python proxy restricts CORS to localhost by default. Modify `ALLOWED_ORIGINS` in `proxy_server.py` if needed.
+4. **Secure Logging:**
+   - API tokens never exposed in logs (SHA256 hash for identification only)
+   - Proxy API key shown only once during generation
+   - Detailed errors logged server-side only (generic messages to clients)
 
-6. **Production Use:** For production environments, consider implementing a proper backend service with server-side authentication instead of browser-based storage.
+5. **API Authentication:**
+   - Python proxy requires X-API-Key header for all requests
+   - Constant-time comparison prevents timing attacks
+   - 401 Unauthorized returned for missing/invalid keys
 
-For a detailed security analysis, see [SECURITY_REPORT.md](SECURITY_REPORT.md).
+6. **CORS Restrictions:**
+   - Whitelist-based origin validation (localhost only by default)
+   - No wildcard origins allowed
+   - Modify `ALLOWED_ORIGINS` in `proxy_server.py` if needed
+
+### ⚠️ Deployment Considerations
+
+1. **Python Proxy:** Generates a random API key on startup. For persistent keys, set `PROXY_API_KEY` environment variable.
+
+2. **Network Exposure:** Do NOT expose the Python proxy to the public internet without:
+   - Reverse proxy with HTTPS (nginx, Apache)
+   - Firewall rules
+   - Additional authentication layer
+   - Rate limiting
+
+3. **Production Use:** For production environments, implement:
+   - Proper backend service with OAuth/JWT
+   - Server-side session management
+   - Database-backed credential storage
+   - Comprehensive audit logging
+   - Rate limiting and DDoS protection
+
+4. **Token Permissions:** Follow principle of least privilege - grant only required Dynatrace scopes.
+
+### 📊 Security Status
+
+- **8/9 vulnerabilities fixed** (89% complete)
+- All critical (P0) issues resolved
+- Only 2 low-priority issues remain (Path Traversal with hardcoded paths, Rate Limiting)
+
+For comprehensive security documentation:
+- [SECURITY_REPORT.md](SECURITY_REPORT.md) - Complete audit report with fix status
+- [SECURITY_FIXES_SUMMARY.md](SECURITY_FIXES_SUMMARY.md) - Detailed implementation guide
+- [ENCRYPTION_DETAILS.md](ENCRYPTION_DETAILS.md) - Technical encryption specifications
 
 ## Requirements
 
