@@ -24,11 +24,12 @@ API_KEY = os.environ.get('PROXY_API_KEY')
 if not API_KEY:
     # Generate a secure random API key
     API_KEY = secrets.token_urlsafe(32)
-    # Hash for display purposes only (first 8 chars)
-    key_hash = hashlib.sha256(API_KEY.encode()).hexdigest()[:8]
     print(f"\n⚠️  No PROXY_API_KEY environment variable found.")
-    print(f"📝 Generated new API key (hash: {key_hash}...)")
-    print(f"💡 Check the dashboard for the full key or set via environment variable")
+    print(f"🔑 Generated new API key - COPY THIS NOW:")
+    print(f"\n   {API_KEY}\n")
+    print(f"📋 Configure this key in the dashboard 'Python Proxy API Key' field")
+    print(f"💾 To make it persistent, set environment variable:")
+    print(f"   export PROXY_API_KEY='{API_KEY}'")
     print()
 
 # Allowed origins for CORS (more restrictive than *)
@@ -361,7 +362,7 @@ class CORSProxyHandler(BaseHTTPRequestHandler):
 def run_proxy(port=8081):
     server_address = ('', port)
     httpd = HTTPServer(server_address, CORSProxyHandler)
-    # Display only hash for security
+    # Display only hash for security (as identifier, not for authentication)
     key_hash = hashlib.sha256(API_KEY.encode()).hexdigest()[:8]
     print(f"""
 ╔══════════════════════════════════════════════════════════════╗
@@ -373,10 +374,10 @@ def run_proxy(port=8081):
 🔌 API Proxy endpoint: http://localhost:{port}/api
 
 🔐 SECURITY ENABLED:
-   API Key Hash: {key_hash}...
+   API Key (hash): {key_hash}...
 
-   ⚠️  The full API key will be displayed in the dashboard UI
-   For persistent key: set PROXY_API_KEY environment variable
+   ℹ️  Configure the full API key in dashboard settings
+   💾 For persistent key: set PROXY_API_KEY environment variable
 
 ⏹️  Premi Ctrl+C per fermare il server
 
